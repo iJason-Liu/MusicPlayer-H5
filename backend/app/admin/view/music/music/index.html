@@ -1,0 +1,213 @@
+{extend name="layout/default" /}
+{block name="content"}
+<div class="layui-card">
+    <div class="layui-card-header">音乐管理</div>
+    <div class="layui-card-body">
+        <div class="layui-btn-group">
+            <button class="layui-btn layui-btn-sm" id="btn-scan">
+                <i class="fa fa-refresh"></i> 扫描音乐文件
+            </button>
+            <button class="layui-btn layui-btn-sm layui-btn-normal" id="btn-upload">
+                <i class="fa fa-upload"></i> 上传音乐
+            </button>
+            <button class="layui-btn layui-btn-sm layui-btn-warm" id="btn-match">
+                <i class="fa fa-magic"></i> 匹配信息
+            </button>
+            <button class="layui-btn layui-btn-sm layui-btn-danger" id="btn-delete">
+                <i class="fa fa-trash"></i> 批量删除
+            </button>
+        </div>
+        
+        <table id="dataTable" lay-filter="dataTable"></table>
+    </div>
+</div>
+
+<script type="text/html" id="toolbar">
+    <div class="layui-form">
+        <div class="layui-inline">
+            <input class="layui-input" name="name" placeholder="歌曲名称" autocomplete="off">
+        </div>
+        <div class="layui-inline">
+            <input class="layui-input" name="artist" placeholder="歌手" autocomplete="off">
+        </div>
+        <div class="layui-inline">
+            <button class="layui-btn layui-btn-sm" lay-submit lay-filter="search">
+                <i class="fa fa-search"></i> 搜索
+            </button>
+            <button class="layui-btn layui-btn-sm layui-btn-primary" type="reset">
+                <i class="fa fa-refresh"></i> 重置
+            </button>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="statusTpl">
+    {{# if(d.status == 1){ }}
+        <span class="layui-badge layui-bg-green">正常</span>
+    {{# } else { }}
+        <span class="layui-badge">禁用</span>
+    {{# } }}
+</script>
+
+<script type="text/html" id="coverTpl">
+    {{# if(d.cover){ }}
+        <img src="{{d.cover}}" style="max-width:50px;max-height:50px;border-radius:4px;">
+    {{# } else { }}
+        <span class="layui-badge layui-bg-gray">无封面</span>
+    {{# } }}
+</script>
+
+<script type="text/html" id="operateTpl">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
+</script>
+
+{/block}
+
+{block name="script"}
+<script>
+layui.use(['table', 'form', 'layer'], function(){
+    var table = layui.table;
+    var form = layui.form;
+    var layer = layui.layer;
+    
+    // 渲染表格
+    var tableIns = table.render({
+        elem: '#dataTable',
+        url: '{:url("index")}',
+        toolbar: '#toolbar',
+        defaultToolbar: ['filter', 'exports', 'print'],
+        cols: [[
+            {type: 'checkbox', fixed: 'left'},
+            {field: 'id', title: 'ID', width: 80, sort: true},
+            {field: 'cover', title: '封面', width: 100, templet: '#coverTpl'},
+            {field: 'name', title: '歌曲名称', minWidth: 150},
+            {field: 'artist', title: '歌手', width: 120},
+            {field: 'album', title: '专辑', width: 150},
+            {field: 'duration', title: '时长', width: 100},
+            {field: 'file_size', title: '文件大小', width: 100},
+            {field: 'status', title: '状态', width: 100, templet: '#statusTpl'},
+            {field: 'create_time', title: '创建时间', width: 160, sort: true},
+            {title: '操作', width: 150, fixed: 'right', toolbar: '#operateTpl'}
+        ]],
+        page: true,
+        limit: 20,
+        limits: [10, 20, 50, 100]
+    });
+    
+    // 搜索
+    form.on('submit(search)', function(data){
+        tableIns.reload({
+            where: data.field,
+            page: {curr: 1}
+        });
+        return false;
+    });
+    
+    // 扫描音乐文件
+    $('#btn-scan').click(function(){
+        layer.confirm('确定要扫描音乐目录吗？', function(index){
+            layer.close(index);
+            layer.load(1);
+            $.post('{:url("scan")}', {}, function(res){
+                layer.closeAll('loading');
+                if(res.code == 1){
+                    layer.msg(res.msg, {icon: 1});
+                    tableIns.reload();
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            });
+        });
+    });
+    
+    // 上传音乐
+    $('#btn-upload').click(function(){
+        layer.open({
+            type: 2,
+            title: '上传音乐',
+            area: ['600px', '400px'],
+            content: '{:url("upload")}'
+        });
+    });
+    
+    // 匹配信息
+    $('#btn-match').click(function(){
+        var checkStatus = table.checkStatus('dataTable');
+        var data = checkStatus.data;
+        
+        if(data.length === 0){
+            layer.msg('请选择要匹配的音乐', {icon: 0});
+            return;
+        }
+        
+        var ids = data.map(function(item){ return item.id; }).join(',');
+        
+        layer.confirm('确定要匹配选中的 ' + data.length + ' 首歌曲信息吗？', function(index){
+            layer.close(index);
+            layer.load(1);
+            $.post('{:url("match")}', {ids: ids}, function(res){
+                layer.closeAll('loading');
+                if(res.code == 1){
+                    layer.msg(res.msg, {icon: 1});
+                    tableIns.reload();
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            });
+        });
+    });
+    
+    // 批量删除
+    $('#btn-delete').click(function(){
+        var checkStatus = table.checkStatus('dataTable');
+        var data = checkStatus.data;
+        
+        if(data.length === 0){
+            layer.msg('请选择要删除的音乐', {icon: 0});
+            return;
+        }
+        
+        var ids = data.map(function(item){ return item.id; }).join(',');
+        
+        layer.confirm('确定要删除选中的 ' + data.length + ' 首歌曲吗？', function(index){
+            layer.close(index);
+            $.post('{:url("del")}', {ids: ids}, function(res){
+                if(res.code == 1){
+                    layer.msg(res.msg, {icon: 1});
+                    tableIns.reload();
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            });
+        });
+    });
+    
+    // 工具栏事件
+    table.on('tool(dataTable)', function(obj){
+        var data = obj.data;
+        
+        if(obj.event === 'edit'){
+            layer.open({
+                type: 2,
+                title: '编辑音乐',
+                area: ['800px', '600px'],
+                content: '{:url("edit")}?ids=' + data.id
+            });
+        } else if(obj.event === 'del'){
+            layer.confirm('确定要删除这首歌曲吗？', function(index){
+                layer.close(index);
+                $.post('{:url("del")}', {ids: data.id}, function(res){
+                    if(res.code == 1){
+                        layer.msg(res.msg, {icon: 1});
+                        obj.del();
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                });
+            });
+        }
+    });
+});
+</script>
+{/block}

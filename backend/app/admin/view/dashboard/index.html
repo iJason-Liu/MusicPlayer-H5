@@ -1,0 +1,141 @@
+{extend name="layout/default" /}
+{block name="content"}
+<div class="layui-row layui-col-space15">
+    <!-- 统计卡片 -->
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <div class="dashboard-stat">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fa fa-music"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">{$musicStats.total}</div>
+                        <div class="stat-label">音乐总数</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <div class="dashboard-stat">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="fa fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">{$musicStats.matched}</div>
+                        <div class="stat-label">已匹配信息</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <div class="dashboard-stat">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <i class="fa fa-database"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">{$musicStats.total_size|format_bytes}</div>
+                        <div class="stat-label">总存储空间</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="layui-col-md3">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <div class="dashboard-stat">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <i class="fa fa-clock-o"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">{$musicStats.total_duration|format_duration}</div>
+                        <div class="stat-label">总时长</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近添加 -->
+<div class="layui-row layui-col-space15" style="margin-top: 15px;">
+    <div class="layui-col-md12">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <i class="fa fa-list"></i> 最近添加的音乐
+            </div>
+            <div class="layui-card-body">
+                <table class="layui-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>歌曲名称</th>
+                            <th>歌手</th>
+                            <th>专辑</th>
+                            <th>时长</th>
+                            <th>添加时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {volist name="recentMusic" id="vo"}
+                        <tr>
+                            <td>{$vo.id}</td>
+                            <td>{$vo.name}</td>
+                            <td>{$vo.artist|default="未知"}</td>
+                            <td>{$vo.album|default="未知"}</td>
+                            <td>{$vo.duration|format_duration}</td>
+                            <td>{$vo.create_time|date="Y-m-d H:i"}</td>
+                        </tr>
+                        {/volist}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard-stat {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 28px;
+}
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #999;
+}
+</style>
+{/block}
