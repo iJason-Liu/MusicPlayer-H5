@@ -418,9 +418,9 @@ MIT License
 
 ## 📞 联系我们
 
-- 💬 提交 Issue：[GitHub Issues](https://github.com/your-repo/issues)
-- 📧 邮件联系：your-email@example.com
-- 💬 加入讨论：[GitHub Discussions](https://github.com/your-repo/discussions)
+- 💬 提交 Issue：[GitHub Issues](https://github.com/iJason-Liu/MusicPlayer-H5/issues)
+- 📧 邮件联系：crayon996@gmail.com
+- 💬 加入讨论：[GitHub Discussions](https://github.com/iJason-Liu/MusicPlayer-H5/discussions)
 
 ---
 
