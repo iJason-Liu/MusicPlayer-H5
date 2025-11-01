@@ -1,429 +1,287 @@
-# 🎵 H5 音乐播放器
+# 音乐播放器项目
 
-一个基于 **ThinkPHP 6 + EasyAdmin 8.1 + Vue 3** 的现代化音乐播放器，具有精美的液态玻璃 UI 设计和流畅的操作体验。
+一个基于 Vue 3 + ThinkPHP 6 的在线音乐播放器。
 
-## ✨ 功能特性
+## 项目架构
 
-### 后台管理功能
+```
+前端：Vue 3 + Vite + Vant UI
+后端：ThinkPHP 6 + MySQL
+音乐：独立域名存储
+```
 
-- 📊 **统计面板**：音乐总数、匹配率、存储空间、总时长统计
-- 🎵 **音乐管理**：增删改查、批量操作
-- � **扫描功能**：自动扫描服务器音乐目录
-- 🎯 **信息匹配**：自动从网易云获取封面、歌词、专辑信息
-- ⬆️ **上传功能**：支持音乐文件上传（MP3、FLAC、WAV、M4A）
-- � **搜批量操作**：批量匹配信息、批量删除
-- 💾 **缓存机制**：音乐信息缓存 7 天，提升性能
+## 域名配置
 
-### 前端播放功能
+- **前端 + API**：https://diary.crayon.vip/
+- **音乐文件**：https://alist.crayon.vip/Music/
 
-- 🎧 播放服务器音乐文件（支持 MP3、FLAC、WAV、M4A）
-- 🎵 自动显示歌曲信息（封面、歌词、专辑）
-- ⏯️ 完整的播放控制（播放/暂停/上一曲/下一曲）
-- 💾 播放列表管理（添加、移除、排序）
-- 🕒 歌词同步滚动显示
-- 💖 收藏喜欢的歌曲
-- 📜 播放历史记录
-- 🔍 音乐搜索功能
-- 🎨 **液态玻璃悬浮 UI 设计**（苹果风格）
-- 📱 完美适配移动端
-- 🎭 三种播放模式（列表循环/随机播放/单曲循环）
+## 功能特性
 
-## 🛠️ 技术栈
+- ✅ 音乐播放（支持 mp3, flac, wav, ogg, m4a）
+- ✅ 音乐搜索
+- ✅ 播放历史
+- ✅ 收藏功能
+- ✅ 播放列表管理
+- ✅ 响应式设计
+- ✅ 断点续传
+- ✅ 跨域支持
 
-### 后端
+## 快速开始
 
-- ThinkPHP 8.1+
-- EasyAdmin 8.1
-- PHP 8.1+
-- MySQL 5.7+
-- 网易云音乐 API
-
-### 前端
-
-- Vue 3.4+
-- Vite 5.0+
-- Pinia 2.1+（状态管理）
-- Vue Router 4.2+
-- Axios 1.6+
-- Vant 4.8+（UI 组件库）
-- SCSS
-- Font Awesome 6.5+
-
-## 📦 安装部署
-
-### 环境要求
-
-- PHP >= 8.1
-- MySQL >= 5.7
-- Node.js >= 16.0
-- Composer
-- 已安装 ThinkPHP 6 + EasyAdmin 8.1
-
-### 后端部署
-
-#### 1. 复制文件到项目
+### 1. 初始化数据库
 
 ```bash
-# 复制控制器
-cp backend/app/admin/controller/music/Music.php your-project/app/admin/controller/music/
-cp backend/app/admin/controller/Dashboard.php your-project/app/admin/controller/
-cp backend/app/api/controller/Music.php your-project/app/api/controller/
-
-# 复制模型
-cp backend/app/admin/model/music/Music.php your-project/app/admin/model/music/
-
-# 复制视图
-cp backend/app/admin/view/music/music/index.html your-project/app/admin/view/music/music/
-cp backend/app/admin/view/dashboard/index.html your-project/app/admin/view/dashboard/
-
-# 复制路由
-cp backend/route/api.php your-project/route/
+cd backend/database
+mysql -h127.0.0.1 -umusic -pKzic52W5Jc7LwhSz music < music.sql
 ```
 
-#### 2. 创建数据库表
+### 2. 配置 Nginx CORS
 
-```bash
-# 进入项目目录
-cd your-project
-
-# 复制迁移文件
-cp backend/database/migrations/create_music_table.php database/migrations/
-
-# 执行迁移
-php think migrate:run
-```
-
-或者直接执行 SQL：
-
-```sql
-CREATE TABLE `music` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) DEFAULT '' COMMENT '歌曲名称',
-  `artist` varchar(255) DEFAULT '' COMMENT '歌手',
-  `album` varchar(255) DEFAULT '' COMMENT '专辑',
-  `cover` varchar(500) DEFAULT '' COMMENT '封面图',
-  `lyric` text COMMENT '歌词',
-  `duration` int(11) DEFAULT 0 COMMENT '时长(秒)',
-  `file_path` varchar(500) DEFAULT '' COMMENT '文件路径',
-  `file_size` bigint(20) DEFAULT 0 COMMENT '文件大小(字节)',
-  `status` tinyint(1) DEFAULT 1 COMMENT '状态:0=禁用,1=正常',
-  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
-  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_name` (`name`),
-  KEY `idx_artist` (`artist`),
-  KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='音乐表';
-```
-
-#### 3. 创建音乐目录
-
-```bash
-# 创建音乐存储目录
-mkdir -p public/wwwroot/alist/music
-chmod -R 755 public/wwwroot
-
-# 上传你的音乐文件到该目录
-```
-
-#### 4. 配置后台菜单
-
-在 EasyAdmin 后台添加菜单：
-
-```
-菜单名称：音乐管理
-路由地址：music/music/index
-图标：fa fa-music
-父级菜单：根据需要选择
-```
-
-#### 5. 配置跨域（如需要）
-
-编辑 `app/middleware.php`：
-
-```php
-return [
-    \app\http\middleware\AllowCrossDomain::class,
-];
-```
-
-### 前端部署
-
-#### 1. 安装依赖
-
-```bash
-cd frontend
-npm install
-# 或使用 yarn
-yarn install
-```
-
-#### 2. 配置 API 地址
-
-编辑 `frontend/vite.config.js`：
-
-```javascript
-export default defineConfig({
-  // ...
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://your-backend-domain.com', // 修改为你的后端地址
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
-  }
-})
-```
-
-#### 3. 开发模式运行
-
-```bash
-npm run dev
-```
-
-访问：http://localhost:3000
-
-#### 4. 生产环境构建
-
-```bash
-npm run build
-```
-
-构建完成后，将 `dist` 目录部署到服务器：
-
-```bash
-# 方式1：部署到后端项目的 public 目录
-cp -r dist/* your-project/public/h5/
-
-# 方式2：使用 Nginx 单独部署
-# 将 dist 目录内容复制到 Nginx 网站根目录
-```
-
-#### 5. Nginx 配置示例
+编辑 `alist.crayon.vip` 配置，添加：
 
 ```nginx
-server {
-    listen 80;
-    server_name music.yourdomain.com;
-    root /var/www/music-player/dist;
-    index index.html;
-
-    # 前端路由
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API 代理
-    location /api/ {
-        proxy_pass http://your-backend-domain.com/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    # 音乐文件
-    location /wwwroot/ {
-        alias /var/www/your-project/public/wwwroot/;
-        add_header Access-Control-Allow-Origin *;
-    }
+location /Music {
+    add_header Access-Control-Allow-Origin *;
+    add_header Access-Control-Allow-Methods 'GET, OPTIONS';
+    add_header Access-Control-Allow-Headers 'Range, Content-Type';
+    add_header Accept-Ranges bytes;
+    expires 30d;
 }
 ```
 
-#### 6. Apache 配置示例
-
-在 `public/.htaccess` 添加：
-
-```apache
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteBase /
-    RewriteRule ^index\.html$ - [L]
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule . /index.html [L]
-</IfModule>
-
-# 允许跨域访问音乐文件
-<IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-</IfModule>
+重启 Nginx：
+```bash
+nginx -s reload
 ```
 
-## 📱 页面说明
+### 3. 导入音乐
 
-### 主要页面
+```bash
+cd backend
+php import_music.php
+```
 
-1. **音乐库（/home）**
-   - 展示所有音乐列表
-   - 支持搜索功能
-   - 点击歌曲即可播放
+### 4. 部署前端
 
-2. **播放器（/player）**
-   - 全屏播放界面
-   - 旋转封面动画
-   - 歌词显示
-   - 进度条控制
-   - 播放模式切换（列表循环/随机/单曲循环）
+上传 `frontend/h5/` 目录到服务器：
+```bash
+scp -r frontend/h5/* root@your-server:/www/wwwroot/diary.crayon.vip/
+```
 
-3. **我的（/mine）**
-   - 个人信息展示
-   - 播放历史
-   - 播放列表
-   - 我的喜欢
-   - 统计信息
+### 5. 测试
 
-### 组件说明
+```bash
+# 测试 API
+curl https://diary.crayon.vip/api/music/list
 
-- **MiniPlayer**: 底部迷你播放器，显示当前播放状态
-- **MusicItem**: 音乐列表项组件
-- **GlassTabbar**: 液态玻璃效果的底部导航栏
+# 测试音乐文件
+curl -I https://alist.crayon.vip/Music/xxx.mp3
 
-## 🎨 UI 设计特点
+# 访问前端
+# 浏览器打开：https://diary.crayon.vip/
+```
 
-- **液态玻璃效果**：使用 `backdrop-filter` 实现毛玻璃背景
-- **渐变背景**：紫色系渐变，营造音乐氛围
-- **流畅动画**：旋转封面、过渡动画
-- **响应式设计**：完美适配各种屏幕尺寸
-- **触觉反馈**：点击缩放效果
+## 文档索引
 
-## 🔧 配置说明
+### 快速指南
+- **立即部署**：[DEPLOY_NOW.md](DEPLOY_NOW.md) - 5 步快速部署
+- **使用指南**：[HOW_TO_USE.md](HOW_TO_USE.md) - 导入音乐工具使用
+
+### 详细文档
+- **前后端整合**：[FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md)
+- **API 文档**：[backend/API.md](backend/API.md)
+- **CORS 配置**：[backend/CORS_CONFIG.md](backend/CORS_CONFIG.md)
+- **部署文档**：[backend/DEPLOY.md](backend/DEPLOY.md)
+- **快速开始**：[backend/QUICK_START.md](backend/QUICK_START.md)
+- **导入指南**：[backend/IMPORT_MUSIC_GUIDE.md](backend/IMPORT_MUSIC_GUIDE.md)
+
+### 检查清单
+- **部署检查**：[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
+- **配置总结**：[FINAL_CONFIG_SUMMARY.md](FINAL_CONFIG_SUMMARY.md)
+- **完成总结**：[BACKEND_COMPLETE.md](BACKEND_COMPLETE.md)
+
+## 目录结构
+
+```
+.
+├── frontend/                 # 前端项目
+│   ├── src/
+│   │   ├── api/             # API 接口
+│   │   ├── components/      # 组件
+│   │   ├── stores/          # 状态管理
+│   │   ├── views/           # 页面
+│   │   └── router/          # 路由
+│   ├── h5/                  # 构建输出
+│   └── vite.config.js       # Vite 配置
+│
+├── backend/                 # 后端项目
+│   ├── app/
+│   │   └── api/
+│   │       └── controller/  # 控制器
+│   ├── database/
+│   │   └── music.sql        # 数据库表结构
+│   ├── route/
+│   │   └── api.php          # 路由配置
+│   └── import_music.php     # 音乐导入工具
+│
+└── docs/                    # 文档
+```
+
+## 技术栈
+
+### 前端
+- Vue 3
+- Vite
+- Vant UI
+- Pinia
+- Vue Router
+- Axios
+
+### 后端
+- ThinkPHP 6
+- MySQL 5.7+
+- PHP 7.2+
+
+### 服务器
+- Nginx
+- PHP-FPM
+
+## 数据库表
+
+- `mu_user` - 用户表
+- `mu_music` - 音乐表
+- `mu_play_history` - 播放历史表
+- `mu_favorite` - 收藏表
+- `mu_playlist` - 播放列表表
+- `mu_playlist_music` - 播放列表音乐关联表
+
+## API 接口
+
+### 音乐相关
+- `GET /api/music/list` - 获取音乐列表
+- `GET /api/music/search` - 搜索音乐
+- `GET /api/music/detail` - 获取音乐详情
+- `GET /api/music/recommend` - 推荐音乐
+- `GET /api/music/hot` - 热门音乐
+
+### 用户相关
+- `POST /api/user/login` - 用户登录
+- `GET /api/user/info` - 获取用户信息
+- `GET /api/user/statistics` - 统计信息
+
+### 播放历史
+- `GET /api/history/list` - 播放历史列表
+- `POST /api/history/add` - 添加播放记录
+- `POST /api/history/clear` - 清空播放历史
+
+### 收藏相关
+- `GET /api/favorite/list` - 收藏列表
+- `POST /api/favorite/add` - 添加收藏
+- `POST /api/favorite/remove` - 取消收藏
+
+### 播放列表
+- `GET /api/playlist/list` - 播放列表
+- `POST /api/playlist/create` - 创建播放列表
+- `GET /api/playlist/detail` - 播放列表详情
+- `POST /api/playlist/add-music` - 添加音乐到列表
+
+详细 API 文档：[backend/API.md](backend/API.md)
+
+## 配置说明
+
+### 前端配置
+
+**环境变量**（`.env.production`）：
+```env
+VITE_API_BASE_URL=https://diary.crayon.vip/api
+```
 
 ### 后端配置
 
-修改音乐目录路径（`app/admin/controller/music/Music.php`）：
-
-```php
-$this->musicDir = root_path() . 'public/wwwroot/alist/music/';
+**数据库配置**（`.env`）：
+```env
+DB_HOST=127.0.0.1
+DB_NAME=music
+DB_USER=music
+DB_PASS=********
+DB_PORT=3306
+DB_PREFIX=mu_
 ```
 
-### 音乐信息 API
+### 音乐导入配置
 
-默认使用网易云音乐第三方 API，可替换为其他音乐 API：
-
+编辑 `backend/import_music.php`：
 ```php
-$api = "https://api.vvhan.com/api/wyy?type=song&msg=" . urlencode($keyword);
+$musicDir = '/www/wwwroot/alist/Music/';  // 音乐目录
+$recursive = false;                        // 是否递归扫描
+$autoParseFilename = true;                 // 自动解析文件名
+$overwriteExisting = false;                // 是否覆盖已存在
 ```
 
-### 文件上传限制
+## 常见问题
 
-修改上传大小限制（`app/admin/controller/music/Music.php`）：
+### 1. 跨域错误
 
-```php
-validate(['file' => [
-    'fileSize' => 50 * 1024 * 1024, // 50MB，可根据需要调整
-    'fileExt' => 'mp3,flac,wav,m4a',
-]])->check(['file' => $file]);
-```
+**解决**：在 `alist.crayon.vip` 配置 CORS，参考 [backend/CORS_CONFIG.md](backend/CORS_CONFIG.md)
 
-## 📝 使用说明
+### 2. 音乐列表为空
 
-### 后台管理
+**解决**：运行 `php import_music.php` 导入音乐
 
-1. 登录 EasyAdmin 后台
-2. 进入"音乐管理"菜单
-3. 点击"扫描音乐文件"按钮，自动扫描服务器目录
-4. 选择需要匹配信息的歌曲，点击"匹配信息"
-5. 也可以手动上传音乐文件
-6. 支持批量删除、批量匹配等操作
+### 3. API 返回 404
 
-### 前端使用
+**解决**：检查 Nginx 配置和后端路由
 
-1. 访问前端页面（如：<http://localhost:3000>）
-2. 在音乐库中浏览和搜索歌曲
-3. 点击歌曲开始播放
-4. 使用底部迷你播放器快速控制
-5. 收藏喜欢的歌曲到"我的喜欢"
-6. 查看播放历史和播放列表
-7. 切换播放模式（循环/随机/单曲）
+### 4. 前端页面空白
 
-## 🚀 性能优化
+**解决**：检查前端文件是否上传，查看浏览器控制台错误
 
-- ✅ 音乐信息缓存（7天）
-- ✅ 懒加载图片
-- ✅ 组件按需加载
-- ✅ 防抖搜索
+详细问题排查：[FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md)
+
+## 性能优化
+
+- ✅ 启用 Gzip 压缩
+- ✅ 浏览器缓存
+- ✅ 静态资源 CDN
 - ✅ 数据库索引优化
-- ✅ 文件路径相对化
-- ✅ API 请求超时控制
-- 🔄 虚拟滚动（可扩展）
-- 🔄 CDN 加速（可扩展）
+- ✅ Redis 缓存（可选）
 
-## 🐛 常见问题
+## 安全建议
 
-### 1. 音乐文件无法播放
+- ✅ 修改默认管理员密码
+- ✅ 使用 HTTPS
+- ✅ 实现 JWT token 验证
+- ✅ 限制 API 访问频率
+- ✅ 定期备份数据库
+- ✅ 关闭生产环境调试模式
 
-- 检查文件路径是否正确
-- 确认 Nginx/Apache 配置允许访问音乐目录
-- 检查跨域配置是否正确
+## 开发计划
 
-### 2. 无法匹配音乐信息
+- [ ] 用户注册功能
+- [ ] 音乐上传功能
+- [ ] 歌词显示
+- [ ] 评论功能
+- [ ] 分享功能
+- [ ] 移动端优化
+- [ ] PWA 支持
 
-- 检查网络连接
-- 确认第三方 API 可用
-- 尝试手动编辑音乐信息
-
-### 3. 上传失败
-
-- 检查 PHP 上传大小限制（`upload_max_filesize`、`post_max_size`）
-- 确认目录有写入权限
-- 检查磁盘空间是否充足
-
-### 4. 前端无法连接后端
-
-- 检查 API 代理配置
-- 确认后端服务正常运行
-- 检查跨域中间件是否启用
-
-## 📄 License
+## 许可证
 
 MIT License
 
-## 👨‍💻 开发者
+## 作者
+Jason Liu
+开发时间：2025-11-01
 
-如有问题或建议，欢迎提交 Issue 或 PR。
+## 致谢
 
-## 📚 相关文档
-
-- 📖 [快速开始](QUICKSTART.md) - 5 分钟快速体验
-- 🚀 [部署指南](DEPLOY.md) - 详细的生产环境部署步骤
-- 📁 [项目结构](PROJECT_STRUCTURE.md) - 了解项目组织方式
-- 📝 [更新日志](CHANGELOG.md) - 查看版本更新记录
-- 🤝 [贡献指南](CONTRIBUTING.md) - 参与项目开发
-- 📊 [项目总结](PROJECT_SUMMARY.md) - 完整的项目总结
-- 🎨 [UI 优化说明](OPTIMIZATION.md) - UI 优化详细说明
-- 🐛 [UI 修复总结](UI_FIX_SUMMARY.md) - 底部导航和页面高度修复
-
-## 🙏 致谢
-
-感谢以下开源项目：
-
-- [ThinkPHP](https://www.thinkphp.cn/) - 强大的 PHP 框架
-- [EasyAdmin](https://gitee.com/zhongshaofa/easyadmin) - 优秀的后台管理系统
-- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [Vant](https://vant-ui.github.io/) - 轻量、可靠的移动端组件库
-- [Vite](https://vitejs.dev/) - 下一代前端构建工具
-- [Font Awesome](https://fontawesome.com/) - 图标库
-- [网易云音乐 API](https://api.vvhan.com/) - 音乐信息接口
-
-## 📄 开源协议
-
-本项目基于 [MIT License](LICENSE) 开源。
-
-## 🌟 Star History
-
-如果这个项目对你有帮助，请给个 Star ⭐
-
-## 📞 联系我们
-
-- 💬 提交 Issue：[GitHub Issues](https://github.com/iJason-Liu/MusicPlayer-H5/issues)
-- 📧 邮件联系：crayon996@gmail.com
-- 💬 加入讨论：[GitHub Discussions](https://github.com/iJason-Liu/MusicPlayer-H5/discussions)
+- Vue.js
+- ThinkPHP
+- Vant UI
+- Font Awesome
 
 ---
 
-**享受音乐，享受生活** 🎵
-
-**Made with ❤️ by Music Player Team**
+**快速开始**：查看 [DEPLOY_NOW.md](DEPLOY_NOW.md)  
+**遇到问题**：查看 [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md)  
+**导入音乐**：查看 [HOW_TO_USE.md](HOW_TO_USE.md)

@@ -4,7 +4,6 @@ namespace app\api\controller;
 
 use app\common\controller\Api;
 use think\facade\Db;
-
 /**
  * 音乐API接口
  */
@@ -14,33 +13,62 @@ class Music extends Api
     protected $noNeedRight = ['*'];
     
     /**
+     * 获取音乐文件 URL
+     * 音乐文件在独立域名：https://alist.crayon.vip/Music/
+     */
+    private function getMusicUrl($filePath)
+    {
+        return 'https://alist.crayon.vip/Music/' . $filePath;
+    }
+    
+    /**
      * 获取音乐列表
      */
-    public function index()
+    public function list()
     {
-        $page = $this->request->param('page', 1);
-        $limit = $this->request->param('limit', 20);
-        $keyword = $this->request->param('keyword', '');
-        
-        $where = [['status', '=', 1]];
-        
-        if (!empty($keyword)) {
-            $where[] = ['name|artist|album', 'like', '%' . $keyword . '%'];
+        try {
+            $page = $this->request->param('page', 1);
+            $limit = $this->request->param('limit', 20);
+            $keyword = $this->request->param('keyword', '');
+            
+            $where = [['status', '=', 1]];
+            
+            if (!empty($keyword)) {
+                $where[] = ['name|artist|album', 'like', '%' . $keyword . '%'];
+            }
+            
+            $list = Db::name('music')
+                ->where($where)
+                ->page($page, $limit)
+                ->order('id', 'desc')
+                ->select();
+            
+            // 转换为数组并添加URL
+            $list = $list->toArray();
+            foreach ($list as &$item) {
+                $item['url'] = $this->getMusicUrl($item['file_path']);
+            }
+            
+            $total = Db::name('music')->where($where)->count();
+            
+            return json([
+                'code' => 1, 
+                'msg' => 'success', 
+                'data' => [
+                    'list' => $list,
+                    'total' => $total,
+                    'page' => (int)$page,
+                    'limit' => (int)$limit,
+                    'pages' => $total > 0 ? ceil($total / $limit) : 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json([
+                'code' => 0,
+                'msg' => '获取音乐列表失败：' . $e->getMessage(),
+                'data' => []
+            ]);
         }
-        
-        $list = Db::name('music')
-            ->where($where)
-            ->page($page, $limit)
-            ->order('id', 'desc')
-            ->select()
-            ->each(function($item) {
-                $item['url'] = request()->domain() . '/wwwroot/alist/music/' . $item['file_path'];
-                return $item;
-            });
-        
-        $total = Db::name('music')->where($where)->count();
-        
-        return json(['code' => 1, 'msg' => 'success', 'data' => $list, 'total' => $total]);
     }
     
     /**
@@ -60,7 +88,7 @@ class Music extends Api
             ->limit(50)
             ->select()
             ->each(function($item) {
-                $item['url'] = request()->domain() . '/wwwroot/alist/music/' . $item['file_path'];
+                $item['url'] = $this->getMusicUrl($item['file_path']);
                 return $item;
             });
         
@@ -84,7 +112,7 @@ class Music extends Api
             return json(['code' => 0, 'msg' => '音乐不存在']);
         }
         
-        $music['url'] = request()->domain() . '/wwwroot/alist/music/' . $music['file_path'];
+        $music['url'] = $this->getMusicUrl($music['file_path']);
         
         // 检查是否收藏
         $userId = $this->getUserId();
@@ -114,7 +142,7 @@ class Music extends Api
             ->limit($limit)
             ->select()
             ->each(function($item) {
-                $item['url'] = request()->domain() . '/wwwroot/alist/music/' . $item['file_path'];
+                $item['url'] = $this->getMusicUrl($item['file_path']);
                 return $item;
             });
         
@@ -138,7 +166,7 @@ class Music extends Api
             ->limit($limit)
             ->select()
             ->each(function($item) {
-                $item['url'] = request()->domain() . '/wwwroot/alist/music/' . $item['file_path'];
+                $item['url'] = $this->getMusicUrl($item['file_path']);
                 return $item;
             });
         
@@ -148,7 +176,7 @@ class Music extends Api
     /**
      * 获取当前用户ID
      */
-    private function getUserId()
+    protected function getUserId()
     {
         $token = $this->request->header('Authorization', '');
         if (empty($token)) {
@@ -157,32 +185,132 @@ class Music extends Api
         // 简化处理，实际应该从 token 解析用户ID
         return 1;
     }
-
+    
     /**
-     * 根据歌曲名获取封面、歌词、专辑等信息
+     * 上传音乐
      */
-    private function getMusicInfo($keyword)
+    public function upload()
     {
-        try {
-            // 网易云第三方 API
-            $api = "https://api.vvhan.com/api/wyy?type=song&msg=" . urlencode($keyword);
-            $res = Http::timeout(5)->get($api)->json();
-            
-            if (!$res || empty($res['info'])) {
-                return [];
-            }
-
-            $info = $res['info'];
-            return [
-                'title' => $info['title'] ?? '',
-                'artist' => $info['author'] ?? '',
-                'album' => $info['album'] ?? '',
-                'cover' => $info['picurl'] ?? '',
-                'lyric' => $info['lrc'] ?? '',
-                'duration' => $info['time'] ?? 0
-            ];
-        } catch (\Exception $e) {
-            return [];
+        $file = $this->request->file('file');
+        $name = $this->request->param('name', '');
+        $artist = $this->request->param('artist', '');
+        $album = $this->request->param('album', '');
+        
+        if (!$file) {
+            return json(['code' => 0, 'msg' => '请选择文件']);
         }
+        
+        // 验证文件类型
+        $ext = strtolower($file->extension());
+        $allowExt = ['mp3', 'flac', 'wav', 'ogg', 'm4a'];
+        
+        if (!in_array($ext, $allowExt)) {
+            return json(['code' => 0, 'msg' => '不支持的文件格式']);
+        }
+        
+        // 保存文件
+        $savePath = 'music/' . date('Ym');
+        $saveName = \think\facade\Filesystem::disk('public')->putFile($savePath, $file);
+        
+        if (!$saveName) {
+            return json(['code' => 0, 'msg' => '文件上传失败']);
+        }
+        
+        // 获取文件信息
+        $fileInfo = $file->getInfo();
+        
+        // 如果没有提供名称，使用文件名
+        if (empty($name)) {
+            $name = pathinfo($file->getOriginalName(), PATHINFO_FILENAME);
+        }
+        
+        // 插入数据库
+        $id = Db::name('music')->insertGetId([
+            'name' => $name,
+            'artist' => $artist,
+            'album' => $album,
+            'file_path' => $saveName,
+            'size' => $fileInfo['size'],
+            'format' => $ext,
+            'status' => 1,
+            'create_time' => time(),
+            'update_time' => time()
+        ]);
+        
+        return json(['code' => 1, 'msg' => '上传成功', 'data' => ['id' => $id]]);
+    }
+    
+    /**
+     * 更新音乐信息
+     */
+    public function update()
+    {
+        $id = $this->request->param('id');
+        $name = $this->request->param('name', '');
+        $artist = $this->request->param('artist', '');
+        $album = $this->request->param('album', '');
+        $cover = $this->request->param('cover', '');
+        $lyric = $this->request->param('lyric', '');
+        
+        if (empty($id)) {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+        
+        $music = Db::name('music')->where('id', $id)->find();
+        if (!$music) {
+            return json(['code' => 0, 'msg' => '音乐不存在']);
+        }
+        
+        $data = ['update_time' => time()];
+        if (!empty($name)) $data['name'] = $name;
+        if (!empty($artist)) $data['artist'] = $artist;
+        if (!empty($album)) $data['album'] = $album;
+        if (!empty($cover)) $data['cover'] = $cover;
+        if (isset($lyric)) $data['lyric'] = $lyric;
+        
+        Db::name('music')->where('id', $id)->update($data);
+        
+        return json(['code' => 1, 'msg' => '更新成功']);
+    }
+    
+    /**
+     * 删除音乐
+     */
+    public function delete()
+    {
+        $id = $this->request->param('id');
+        
+        if (empty($id)) {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+        
+        $music = Db::name('music')->where('id', $id)->find();
+        if (!$music) {
+            return json(['code' => 0, 'msg' => '音乐不存在']);
+        }
+        
+        // 软删除，只更新状态
+        Db::name('music')->where('id', $id)->update([
+            'status' => 0,
+            'update_time' => time()
+        ]);
+        
+        return json(['code' => 1, 'msg' => '删除成功']);
+    }
+    
+    /**
+     * 增加播放次数
+     */
+    public function increasePlayCount()
+    {
+        $id = $this->request->param('id');
+        
+        if (empty($id)) {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+        
+        Db::name('music')->where('id', $id)->inc('play_count')->update();
+        
+        return json(['code' => 1, 'msg' => 'success']);
     }
 }

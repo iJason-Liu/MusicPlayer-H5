@@ -142,7 +142,7 @@ class Playlist extends Api
             ->order('pm.create_time', 'desc')
             ->select()
             ->each(function($item) {
-                $item['url'] = request()->domain() . '/wwwroot/alist/music/' . $item['file_path'];
+                $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
                 return $item;
             });
         
@@ -237,7 +237,7 @@ class Playlist extends Api
     /**
      * 获取当前用户ID
      */
-    private function getUserId()
+    protected function getUserId()
     {
         $token = $this->request->header('Authorization', '');
         // 简化处理，实际应该从 token 解析用户ID

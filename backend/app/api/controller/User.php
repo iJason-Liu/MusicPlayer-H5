@@ -198,7 +198,7 @@ class User extends Api
     /**
      * 获取当前用户ID
      */
-    private function getUserId()
+    protected function getUserId()
     {
         // 从请求头获取 token
         $token = $this->request->header('Authorization', '');

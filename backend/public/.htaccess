@@ -2,6 +2,12 @@
   Options +FollowSymlinks -Multiviews
   RewriteEngine On
 
+  # API路由重写 - 将 /api/* 重写到 api.php
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^api/(.*)$ api.php/$1 [QSA,PT,L]
+
+  # 默认路由重写
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^(.*)$ index.php/$1 [QSA,PT,L]

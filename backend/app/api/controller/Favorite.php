@@ -31,7 +31,7 @@ class Favorite extends Api
             ->page($page, $limit)
             ->select()
             ->each(function($item) {
-                $item['url'] = request()->domain() . '/wwwroot/alist/music/' . $item['file_path'];
+                $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
                 $item['is_favorite'] = true;
                 return $item;
             });
@@ -126,7 +126,7 @@ class Favorite extends Api
     /**
      * 获取当前用户ID
      */
-    private function getUserId()
+    protected function getUserId()
     {
         $token = $this->request->header('Authorization', '');
         // 简化处理，实际应该从 token 解析用户ID
