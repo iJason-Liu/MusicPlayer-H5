@@ -25,8 +25,9 @@ request.interceptors.response.use(
   }
 )
 
+// 获取音乐列表
 export const getMusicList = (params = {}) => {
-  return request.get('/music/index', { params })
+  return request.get('/music/list', { params })
 }
 
 export const searchMusic = (keyword) => {

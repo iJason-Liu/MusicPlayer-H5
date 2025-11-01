@@ -30,7 +30,8 @@ export default defineConfig(({ mode }) => ({
 			"/api": {
 				target: "https://diary.crayon.vip",
 				changeOrigin: true,
-				rewrite: (path) => path.replace(/^\/api/, ""),
+				// 保持 /api 路径不变，服务器端会处理重写
+				rewrite: (path) => path,
 			},
 		},
 	},

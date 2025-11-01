@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { login } from '@/api/user'
 
 export const useUserStore = defineStore('user', () => {
   // 开发模式标志 - 设置为 true 可跳过登录验证
@@ -13,32 +14,21 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = ref(!!token.value)
   
   // 登录
-  const login = (username, password) => {
+  const loginUser = (username, password) => {
     return new Promise((resolve, reject) => {
-      // 模拟登录请求
-      setTimeout(() => {
-        if (username && password) {
-          const mockToken = 'mock_token_' + Date.now()
-          const mockUser = {
-            id: 1,
-            username: username,
-            nickname: username,
-            avatar: 'https://via.placeholder.com/100'
-          }
-          
-          token.value = mockToken
-          userInfo.value = mockUser
-          isLoggedIn.value = true
-          
-          // 保存到本地存储
-          localStorage.setItem('token', mockToken)
-          localStorage.setItem('userInfo', JSON.stringify(mockUser))
-          
-          resolve({ code: 1, msg: '登录成功', data: mockUser })
+      // 请求接口
+      login(username, password).then(response => {
+        resolve(response);
+        if (response.code === 1) {
+          token.value = response.data.token;
+          userInfo.value = response.data.user;
+          isLoggedIn.value = true;
         } else {
-          reject({ code: 0, msg: '用户名或密码不能为空' })
+          reject(response.msg);
         }
-      }, 500)
+      }).catch(error => {
+        reject(error)
+      })
     })
   }
   
@@ -68,12 +58,8 @@ export const useUserStore = defineStore('user', () => {
   
   // 检查是否需要登录
   const needLogin = () => {
-    // 开发模式下可以跳过登录
-    if (DEV_MODE) {
-      console.log('开发模式：跳过登录验证')
-      return false
-    }
-    return !isLoggedIn.value
+    // console.log(isLoggedIn.value);
+    return !isLoggedIn.value // 不允许未登录访问，如需强制登录改为 true
   }
   
   // 初始化
@@ -84,7 +70,7 @@ export const useUserStore = defineStore('user', () => {
     userInfo,
     token,
     isLoggedIn,
-    login,
+    loginUser,
     logout,
     needLogin
   }

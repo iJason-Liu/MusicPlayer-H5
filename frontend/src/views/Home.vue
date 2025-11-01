@@ -44,25 +44,49 @@ const displayList = ref([])
 const loading = ref(false)
 const finished = ref(false)
 
+// 分页参数
+const page = ref(1)
+const limit = ref(20)
+const total = ref(0)
+
 const loadMusicList = async () => {
   try {
-    console.log('开始加载音乐列表...')
+    console.log(`开始加载音乐列表... 第${page.value}页`)
     loading.value = true
-    const res = await getMusicList()
+    
+    const res = await getMusicList({
+      page: page.value,
+      limit: limit.value,
+      keyword: searchKeyword.value
+    })
     
     console.log('音乐列表响应:', res)
     
-    if (res.data && res.data.length > 0) {
-      musicStore.setMusicList(res.data)
-      musicStore.setPlaylist(res.data)
-      displayList.value = res.data
-      console.log('✅ 音乐列表加载成功，共', res.data.length, '首')
+    if (res.data && res.data.list && res.data.list.length > 0) {
+      // 第一页替换，后续页追加
+      if (page.value === 1) {
+        displayList.value = res.data.list
+        musicStore.setMusicList(res.data.list)
+        musicStore.setPlaylist(res.data.list)
+      } else {
+        displayList.value = [...displayList.value, ...res.data.list]
+      }
+      
+      total.value = res.data.total
+      
+      // 判断是否还有更多数据
+      if (displayList.value.length >= res.data.total) {
+        finished.value = true
+      }
+      
+      console.log(`✅ 音乐列表加载成功，当前${displayList.value.length}首，共${res.data.total}首`)
     } else {
-      console.warn('⚠️ 暂无音乐数据')
-      showToast('暂无音乐')
+      if (page.value === 1) {
+        console.warn('⚠️ 暂无音乐数据')
+        showToast('暂无音乐')
+      }
+      finished.value = true
     }
-    
-    finished.value = true
   } catch (error) {
     console.error('❌ 加载音乐列表失败:', error)
     console.error('错误详情:', error.response || error.message)
@@ -74,8 +98,14 @@ const loadMusicList = async () => {
 }
 
 const handleSearch = async () => {
+  // 重置分页
+  page.value = 1
+  displayList.value = []
+  finished.value = false
+  
   if (!searchKeyword.value.trim()) {
-    displayList.value = musicStore.musicList
+    // 清空搜索，重新加载全部
+    await loadMusicList()
     return
   }
   
@@ -85,23 +115,25 @@ const handleSearch = async () => {
     
     if (res.data && res.data.length > 0) {
       displayList.value = res.data
+      finished.value = true
     } else {
       displayList.value = []
       showToast('未找到相关音乐')
+      finished.value = true
     }
   } catch (error) {
     console.error('搜索失败:', error)
     showToast('搜索失败，请稍后重试')
+    finished.value = true
   } finally {
     loading.value = false
   }
 }
 
 const onLoad = () => {
-  if (displayList.value.length === 0) {
+  if (!finished.value) {
+    page.value++
     loadMusicList()
-  } else {
-    finished.value = true
   }
 }
 
@@ -161,7 +193,7 @@ onMounted(() => {
   .content {
     flex: 1;
     overflow-y: auto;
-    padding: 0 16px 20px;
+    padding: 0 16px 75px;
     
     &::-webkit-scrollbar {
       width: 4px;

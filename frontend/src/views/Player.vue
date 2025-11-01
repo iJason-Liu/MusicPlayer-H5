@@ -10,7 +10,8 @@
 					<div class="name">{{ currentMusic?.name || "暂无播放" }}</div>
 					<div class="artist">{{ currentMusic?.artist || "" }}</div>
 				</div>
-				<i class="fas fa-ellipsis-v"></i>
+				<!-- 显示当前播放歌曲的操作 详情 -->
+				<i class="fas fa-ellipsis-v" @click="showMenu = true"></i>
 			</div>
 
 			<!-- 封面 -->

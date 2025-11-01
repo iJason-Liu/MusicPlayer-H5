@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 const routes = [
@@ -51,12 +51,14 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(),
   routes
 })
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
+  console.log('路由跳转:', from.path, '->', to.path)
+  
   // 设置页面标题
   document.title = to.meta.title || '音乐播放器'
   
@@ -66,15 +68,18 @@ router.beforeEach((to, from, next) => {
     
     // 如果需要登录但未登录（且非开发模式）
     if (userStore.needLogin()) {
+      console.log('需要登录，重定向到登录页')
       // 保存原始目标路径
       next({
         path: '/login',
         query: { redirect: to.fullPath }
       })
     } else {
+      console.log('已登录，允许访问')
       next()
     }
   } else {
+    console.log('无需登录，允许访问')
     next()
   }
 })

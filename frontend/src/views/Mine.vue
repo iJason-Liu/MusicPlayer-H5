@@ -3,10 +3,11 @@
     <div class="header">
       <div class="user-info">
         <div class="avatar">
-          <i class="fas fa-user"></i>
+          <i class="fas fa-user" v-if="!userStore.isLoggedIn || userStore.userInfo?.avatar == ''"></i>
+          <img :src="userStore.userInfo?.avatar" alt="avatar" v-if="userStore.isLoggedIn && userStore.userInfo?.avatar != ''">
         </div>
         <div class="info">
-          <div class="name">音乐爱好者</div>
+          <div class="name">{{ userStore.userInfo.nickname }}</div>
           <div class="desc">享受音乐，享受生活</div>
         </div>
       </div>
@@ -57,7 +58,7 @@
         </div>
       </div>
       
-      <div class="menu-item" @click="handleLogout" v-if="!userStore.DEV_MODE">
+      <div class="menu-item" @click="handleLogout" v-if="userStore.isLoggedIn">
         <div class="left">
           <i class="fas fa-sign-out-alt icon"></i>
           <span>退出登录</span>

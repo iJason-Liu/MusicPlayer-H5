@@ -1,5 +1,8 @@
 <template>
   <div class="mini-player" @click="goToPlayer">
+    <div class="progress-bar">
+      <div class="progress" :style="{ width: progress + '%' }"></div>
+    </div>
     <div class="mini-player-content">
       <img :src="currentMusic.cover" class="cover rotating" :class="{ paused: !isPlaying }" />
       <div class="info">
@@ -14,9 +17,6 @@
         ></i>
         <i class="fas fa-step-forward control-icon" @click.stop="playNext"></i>
       </div>
-    </div>
-    <div class="progress-bar">
-      <div class="progress" :style="{ width: progress + '%' }"></div>
     </div>
   </div>
 </template>
@@ -49,7 +49,7 @@ const goToPlayer = () => {
 <style lang="scss" scoped>
 .mini-player {
   position: fixed;
-  bottom: 70px;
+  bottom: 80px;
   left: 0;
   right: 0;
   background: rgba(255, 255, 255, 0.12);
@@ -123,7 +123,7 @@ const goToPlayer = () => {
   }
   
   .progress-bar {
-    height: 2px;
+    height: 3px;
     background: rgba(255, 255, 255, 0.2);
     
     .progress {
