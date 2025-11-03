@@ -1,0 +1,140 @@
+<div class="layuimini-container">
+    <div class="layuimini-main">
+        <div class="layui-row layui-col-space15">
+    <!-- 概览统计 -->
+    <div class="layui-col-md12">
+        <div class="layui-card">
+            <div class="layui-card-header">数据概览</div>
+            <div class="layui-card-body">
+                <div class="layui-row layui-col-space10">
+                    <div class="layui-col-md3">
+                        <div class="layui-panel" style="padding: 20px; text-align: center;">
+                            <div style="font-size: 32px; color: #1E9FFF;" id="totalUsers">0</div>
+                            <div style="margin-top: 10px; color: #666;">总用户数</div>
+                        </div>
+                    </div>
+                    <div class="layui-col-md3">
+                        <div class="layui-panel" style="padding: 20px; text-align: center;">
+                            <div style="font-size: 32px; color: #5FB878;" id="totalMusic">0</div>
+                            <div style="margin-top: 10px; color: #666;">音乐总数</div>
+                        </div>
+                    </div>
+                    <div class="layui-col-md3">
+                        <div class="layui-panel" style="padding: 20px; text-align: center;">
+                            <div style="font-size: 32px; color: #FFB800;" id="totalPlayCount">0</div>
+                            <div style="margin-top: 10px; color: #666;">总播放次数</div>
+                        </div>
+                    </div>
+                    <div class="layui-col-md3">
+                        <div class="layui-panel" style="padding: 20px; text-align: center;">
+                            <div style="font-size: 32px; color: #FF5722;" id="activeUsers">0</div>
+                            <div style="margin-top: 10px; color: #666;">活跃用户(7天)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 音乐排行榜 -->
+    <div class="layui-col-md6">
+        <div class="layui-card">
+            <div class="layui-card-header">音乐播放排行榜 TOP 10</div>
+            <div class="layui-card-body">
+                <table class="layui-table" lay-size="sm">
+                    <thead>
+                        <tr>
+                            <th width="60">排名</th>
+                            <th>歌曲名称</th>
+                            <th>艺术家</th>
+                            <th width="100">播放次数</th>
+                        </tr>
+                    </thead>
+                    <tbody id="musicPlayRank"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 用户排行榜 -->
+    <div class="layui-col-md6">
+        <div class="layui-card">
+            <div class="layui-card-header">用户播放排行榜 TOP 10</div>
+            <div class="layui-card-body">
+                <table class="layui-table" lay-size="sm">
+                    <thead>
+                        <tr>
+                            <th width="60">排名</th>
+                            <th>用户名</th>
+                            <th>昵称</th>
+                            <th width="100">播放次数</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userPlayRank"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+layui.use(['jquery', 'layer'], function(){
+    var $ = layui.$;
+    var layer = layui.layer;
+    
+    // 加载概览数据
+    function loadOverview() {
+        $.get('{:url("index")}', {type: 'overview'}, function(res){
+            if(res.code == 1){
+                $('#totalUsers').text(res.data.total_users);
+                $('#totalMusic').text(res.data.total_music);
+                $('#totalPlayCount').text(res.data.total_play_count);
+                $('#activeUsers').text(res.data.active_users);
+            }
+        });
+    }
+    
+    // 加载音乐排行
+    function loadMusicRank() {
+        $.get('{:url("index")}', {type: 'music_rank', limit: 10}, function(res){
+            if(res.code == 1 && res.data.play_rank){
+                var html = '';
+                res.data.play_rank.forEach(function(item, index){
+                    html += '<tr>';
+                    html += '<td>' + (index + 1) + '</td>';
+                    html += '<td>' + item.name + '</td>';
+                    html += '<td>' + (item.artist || '-') + '</td>';
+                    html += '<td>' + item.play_count + '</td>';
+                    html += '</tr>';
+                });
+                $('#musicPlayRank').html(html);
+            }
+        });
+    }
+    
+    // 加载用户排行
+    function loadUserRank() {
+        $.get('{:url("index")}', {type: 'user_rank', limit: 10}, function(res){
+            if(res.code == 1 && res.data.play_rank){
+                var html = '';
+                res.data.play_rank.forEach(function(item, index){
+                    html += '<tr>';
+                    html += '<td>' + (index + 1) + '</td>';
+                    html += '<td>' + item.username + '</td>';
+                    html += '<td>' + (item.nickname || '-') + '</td>';
+                    html += '<td>' + item.play_count + '</td>';
+                    html += '</tr>';
+                });
+                $('#userPlayRank').html(html);
+            }
+        });
+    }
+    
+    // 初始化加载
+    loadOverview();
+    loadMusicRank();
+    loadUserRank();
+});
+</script>
+    </div>
+</div>

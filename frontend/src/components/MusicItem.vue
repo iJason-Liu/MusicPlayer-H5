@@ -1,9 +1,9 @@
 <template>
   <div class="music-item" @click="handlePlay">
-    <img :src="music.cover" class="cover" />
+    <img :src="imgPath + music.cover" class="cover" />
     <div class="info">
       <div class="name">{{ music.name }}</div>
-      <div class="artist">{{ music.artist }} - {{ music.album }}</div>
+      <div class="artist">{{ music.artist }}{{ music.album }}</div>
     </div>
     <div class="actions">
       <i 
@@ -18,14 +18,19 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useMusicStore } from '@/stores/music'
 import { showToast } from 'vant'
-
+const imgPath = inject('imgPath')
 const props = defineProps({
   music: {
     type: Object,
     required: true
+  },
+  // 当前列表的所有歌曲
+  playlist: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -34,7 +39,16 @@ const musicStore = useMusicStore()
 const isFavorite = computed(() => musicStore.isFavorite(props.music.id))
 
 const handlePlay = () => {
-  musicStore.playMusic(props.music)
+  // 如果传递了播放列表，则设置为当前播放队列
+  if (props.playlist && props.playlist.length > 0) {
+    musicStore.setPlaylist(props.playlist)
+    // 找到当前歌曲在列表中的索引
+    const index = props.playlist.findIndex(m => m.id === props.music.id)
+    musicStore.playMusic(props.music, index)
+  } else {
+    // 没有传递列表，只播放当前歌曲
+    musicStore.playMusic(props.music)
+  }
 }
 
 const handleFavorite = () => {

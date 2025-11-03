@@ -174,19 +174,6 @@ class Music extends Api
     }
     
     /**
-     * 获取当前用户ID
-     */
-    protected function getUserId()
-    {
-        $token = $this->request->header('Authorization', '');
-        if (empty($token)) {
-            return null;
-        }
-        // 简化处理，实际应该从 token 解析用户ID
-        return 1;
-    }
-    
-    /**
      * 上传音乐
      */
     public function upload()

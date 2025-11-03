@@ -1,0 +1,176 @@
+<div class="layui-card" style="margin: 20px;">
+    <div class="layui-card-header">上传音乐</div>
+    <div class="layui-card-body">
+        <div class="layui-upload">
+            <button type="button" class="layui-btn" id="uploadMusic">
+                <i class="layui-icon">&#xe67c;</i>选择音乐文件
+            </button>
+            <button type="button" class="layui-btn layui-btn-normal" id="matchAll" style="display:none;">
+                <i class="layui-icon">&#xe857;</i>批量匹配信息
+            </button>
+            <div class="layui-upload-list">
+                <table class="layui-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th width="50">ID</th>
+                            <th width="90">文件名</th>
+                            <th width="150">歌曲名</th>
+                            <th width="110">艺术家</th>
+                            <th width="80">大小</th>
+                            <th width="100">状态</th>
+                            <th width="120">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="uploadList"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="layui-form-mid layui-word-aux" style="margin-top: 10px;">
+            <p><strong>支持格式：</strong>mp3、flac、wav、m4a</p>
+            <p><strong>文件大小：</strong>最大 50MB</p>
+            <p><strong>文件命名：</strong>建议使用"艺术家 - 歌曲名.mp3"格式，系统会自动识别</p>
+            <p><strong>上传后：</strong>可以点击"编辑"手动补充信息，或点击"匹配"自动获取歌曲信息</p>
+        </div>
+    </div>
+</div>
+
+<script>
+layui.use(['upload', 'layer'], function(){
+    var upload = layui.upload;
+    var layer = layui.layer;
+    var $ = layui.$;
+    
+    var uploadedIds = [];
+    
+    // 音乐上传
+    upload.render({
+        elem: '#uploadMusic',
+        url: '{:url("upload")}',
+        accept: 'file',
+        acceptMime: 'audio/*,.mp3,.flac,.wav,.m4a',
+        size: 51200, // 50MB
+        multiple: true,
+        auto: true,
+        before: function(obj){
+            layer.load(1);
+        },
+        done: function(res, index, upload){
+            layer.closeAll('loading');
+            
+            var tr = $('<tr data-id="' + (res.data ? res.data.id : '') + '"></tr>');
+            
+            if(res.code == 1){
+                uploadedIds.push(res.data.id);
+                $('#matchAll').show();
+                
+                tr.append('<td>' + res.data.id + '</td>');
+                tr.append('<td>' + upload.name + '</td>');
+                tr.append('<td>' + (res.data.name || '-') + '</td>');
+                tr.append('<td>' + (res.data.artist || '-') + '</td>');
+                tr.append('<td>' + (upload.size / 1024 / 1024).toFixed(2) + ' MB</td>');
+                tr.append('<td><span class="layui-badge layui-bg-green">上传成功</span></td>');
+                tr.append('<td>' +
+                    '<button class="layui-btn layui-btn-xs" onclick="editMusic(' + res.data.id + ')">编辑</button> ' +
+                    '<button class="layui-btn layui-btn-xs layui-btn-normal" onclick="matchMusic(' + res.data.id + ')">匹配</button>' +
+                    '</td>');
+                
+                layer.msg('上传成功', {icon: 1, time: 1000});
+            } else {
+                tr.append('<td>-</td>');
+                tr.append('<td>' + upload.name + '</td>');
+                tr.append('<td>-</td>');
+                tr.append('<td>-</td>');
+                tr.append('<td>' + (upload.size / 1024 / 1024).toFixed(2) + ' MB</td>');
+                tr.append('<td><span class="layui-badge layui-bg-red">上传失败</span></td>');
+                tr.append('<td>' + (res.msg || '未知错误') + '</td>');
+                
+                layer.msg(res.msg || '上传失败', {icon: 2});
+            }
+            
+            $('#uploadList').append(tr);
+        },
+        error: function(index, upload){
+            layer.closeAll('loading');
+            
+            var tr = $('<tr></tr>');
+            tr.append('<td>-</td>');
+            tr.append('<td>' + upload.name + '</td>');
+            tr.append('<td>-</td>');
+            tr.append('<td>-</td>');
+            tr.append('<td>' + (upload.size / 1024 / 1024).toFixed(2) + ' MB</td>');
+            tr.append('<td><span class="layui-badge layui-bg-red">上传失败</span></td>');
+            tr.append('<td>网络错误</td>');
+            
+            $('#uploadList').append(tr);
+            layer.msg('上传失败', {icon: 2});
+        }
+    });
+    
+    // 批量匹配
+    $('#matchAll').click(function(){
+        if(uploadedIds.length === 0){
+            layer.msg('没有需要匹配的音乐', {icon: 0});
+            return;
+        }
+        
+        layer.confirm('确定要匹配所有已上传的音乐信息吗？', function(index){
+            layer.close(index);
+            layer.load(1);
+            
+            $.post('{:url("match")}', {ids: uploadedIds.join(',')}, function(res){
+                layer.closeAll('loading');
+                if(res.code == 1){
+                    layer.msg(res.msg, {icon: 1});
+                    setTimeout(function(){
+                        parent.layer.closeAll();
+                        parent.layui.table.reload('dataTable');
+                    }, 1500);
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            });
+        });
+    });
+});
+
+// 编辑音乐
+function editMusic(id){
+    parent.layer.open({
+        type: 2,
+        title: '编辑音乐',
+        area: ['800px', '600px'],
+        content: '{:url("edit")}?id=' + id,
+        end: function(){
+            parent.layui.table.reload('dataTable');
+        }
+    });
+}
+
+// 匹配音乐信息
+function matchMusic(id){
+    layui.use(['layer'], function(){
+        var layer = layui.layer;
+        var $ = layui.$;
+        
+        layer.confirm('确定要匹配该音乐的信息吗？', function(index){
+            layer.close(index);
+            layer.load(1);
+            
+            $.post('{:url("match")}', {ids: id}, function(res){
+                layer.closeAll('loading');
+                if(res.code == 1){
+                    layer.msg(res.msg, {icon: 1});
+                    // 更新表格中的显示
+                    var tr = $('tr[data-id="' + id + '"]');
+                    if(tr.length > 0){
+                        tr.find('td:eq(5)').html('<span class="layui-badge layui-bg-blue">已匹配</span>');
+                    }
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            });
+        });
+    });
+}
+</script>

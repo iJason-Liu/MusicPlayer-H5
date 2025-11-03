@@ -1,5 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import {
+  getPlayHistory,
+  addPlayHistory,
+  deletePlayHistory,
+  clearPlayHistory,
+  getFavoriteList,
+  addFavorite,
+  removeFavorite,
+  checkFavorite,
+  savePlayQueue
+} from '@/api'
 
 export const useMusicStore = defineStore('music', () => {
   // 状态
@@ -35,6 +46,9 @@ export const useMusicStore = defineStore('music', () => {
     if (!audio.value) {
       audio.value = new Audio()
       
+      // 允许后台播放
+      audio.value.preload = 'auto'
+      
       audio.value.addEventListener('timeupdate', () => {
         currentTime.value = audio.value.currentTime
       })
@@ -51,6 +65,58 @@ export const useMusicStore = defineStore('music', () => {
         console.error('音频加载失败', e)
         isPlaying.value = false
       })
+      
+      audio.value.addEventListener('play', () => {
+        isPlaying.value = true
+      })
+      
+      audio.value.addEventListener('pause', () => {
+        isPlaying.value = false
+      })
+      
+      // 启用媒体会话 API 支持后台播放和锁屏控制
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', () => {
+          audio.value?.play()
+        })
+        
+        navigator.mediaSession.setActionHandler('pause', () => {
+          audio.value?.pause()
+        })
+        
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          playPrev()
+        })
+        
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          playNext()
+        })
+        
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (details.seekTime) {
+            seek(details.seekTime)
+          }
+        })
+      }
+    }
+  }
+  
+  // 更新媒体会话信息
+  const updateMediaSession = (music) => {
+    if ('mediaSession' in navigator && music) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: music.name || '未知歌曲',
+        artist: music.artist || '未知艺术家',
+        album: music.album || '未知专辑',
+        artwork: music.cover ? [
+          { src: music.cover, sizes: '96x96', type: 'image/png' },
+          { src: music.cover, sizes: '128x128', type: 'image/png' },
+          { src: music.cover, sizes: '192x192', type: 'image/png' },
+          { src: music.cover, sizes: '256x256', type: 'image/png' },
+          { src: music.cover, sizes: '384x384', type: 'image/png' },
+          { src: music.cover, sizes: '512x512', type: 'image/png' }
+        ] : []
+      })
     }
   }
   
@@ -60,18 +126,27 @@ export const useMusicStore = defineStore('music', () => {
   }
   
   // 播放音乐
-  const playMusic = (music, index = -1) => {
+  const playMusic = async (music, index = -1) => {
     initAudio()
     
     currentMusic.value = music
     currentIndex.value = index >= 0 ? index : playlist.value.findIndex(m => m.id === music.id)
     
     audio.value.src = music.url
-    audio.value.play()
-    isPlaying.value = true
     
-    // 添加到播放历史
-    addToHistory(music)
+    try {
+      await audio.value.play()
+      isPlaying.value = true
+      
+      // 更新媒体会话信息
+      updateMediaSession(music)
+      
+      // 添加到播放历史（调用API）
+      await addToHistory(music)
+    } catch (error) {
+      console.error('播放失败:', error)
+      isPlaying.value = false
+    }
   }
   
   // 暂停/播放
@@ -83,7 +158,6 @@ export const useMusicStore = defineStore('music', () => {
     } else {
       audio.value.play()
     }
-    isPlaying.value = !isPlaying.value
   }
   
   // 下一曲
@@ -122,6 +196,28 @@ export const useMusicStore = defineStore('music', () => {
     if (audio.value) {
       audio.value.currentTime = time
       currentTime.value = time
+      
+      // 更新媒体会话位置
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setPositionState({
+          duration: duration.value,
+          playbackRate: audio.value.playbackRate,
+          position: time
+        })
+      }
+    }
+  }
+  
+  // 同步播放列表到服务器
+  const syncPlaylistToServer = async (list) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (token && list && list.length > 0) {
+        const musicIds = list.map(m => m.id)
+        await savePlayQueue(musicIds)
+      }
+    } catch (error) {
+      console.error('同步播放列表到服务器失败:', error)
     }
   }
   
@@ -130,6 +226,8 @@ export const useMusicStore = defineStore('music', () => {
     playlist.value = list
     // 保存到本地存储
     localStorage.setItem('playlist', JSON.stringify(list))
+    // 同步到后端
+    syncPlaylistToServer(list)
   }
   
   // 添加到播放列表
@@ -138,6 +236,7 @@ export const useMusicStore = defineStore('music', () => {
     if (!exists) {
       playlist.value.push(music)
       localStorage.setItem('playlist', JSON.stringify(playlist.value))
+      syncPlaylistToServer(playlist.value)
     }
   }
   
@@ -154,33 +253,121 @@ export const useMusicStore = defineStore('music', () => {
         currentIndex.value = -1
       }
     }
+    localStorage.setItem('playlist', JSON.stringify(playlist.value))
+    syncPlaylistToServer(playlist.value)
+  }
+  
+  // ==================== 播放历史相关（使用API） ====================
+  
+  // 加载播放历史
+  const loadPlayHistory = async (page = 1, limit = 20) => {
+    try {
+      const res = await getPlayHistory({ page, limit })
+      if (res.data && res.data.list) {
+        playHistory.value = res.data.list
+      }
+    } catch (error) {
+      console.error('加载播放历史失败:', error)
+      // 降级到本地存储
+      const savedHistory = localStorage.getItem('playHistory')
+      if (savedHistory) {
+        playHistory.value = JSON.parse(savedHistory)
+      }
+    }
   }
   
   // 添加到播放历史
-  const addToHistory = (music) => {
-    const exists = playHistory.value.findIndex(m => m.id === music.id)
-    if (exists >= 0) {
-      playHistory.value.splice(exists, 1)
+  const addToHistory = async (music) => {
+    try {
+      // 调用API添加播放记录
+      await addPlayHistory(music.id, Math.floor(currentTime.value))
+      
+      // 不立即更新本地状态，等待用户进入播放历史页面时从服务器刷新
+      // 这样可以避免数据不一致
+    } catch (error) {
+      console.error('添加播放历史失败:', error)
+      // 降级到本地存储
+      const exists = playHistory.value.findIndex(m => m.id === music.id)
+      if (exists >= 0) {
+        playHistory.value.splice(exists, 1)
+      }
+      playHistory.value.unshift({ ...music, playTime: Date.now() })
+      if (playHistory.value.length > 100) {
+        playHistory.value.pop()
+      }
+      localStorage.setItem('playHistory', JSON.stringify(playHistory.value))
     }
-    playHistory.value.unshift({ ...music, playTime: Date.now() })
-    if (playHistory.value.length > 100) {
-      playHistory.value.pop()
+  }
+  
+  // 删除播放历史
+  const removeFromHistory = async (musicId) => {
+    try {
+      await deletePlayHistory(musicId)
+      playHistory.value = playHistory.value.filter(m => m.id !== musicId)
+      localStorage.setItem('playHistory', JSON.stringify(playHistory.value))
+    } catch (error) {
+      console.error('删除播放历史失败:', error)
     }
-    // 保存到本地存储
-    localStorage.setItem('playHistory', JSON.stringify(playHistory.value))
+  }
+  
+  // 清空播放历史
+  const clearHistory = async () => {
+    try {
+      await clearPlayHistory()
+      playHistory.value = []
+      localStorage.removeItem('playHistory')
+    } catch (error) {
+      console.error('清空播放历史失败:', error)
+    }
+  }
+  
+  // ==================== 收藏相关（使用API） ====================
+  
+  // 加载收藏列表
+  const loadFavorites = async (page = 1, limit = 20) => {
+    try {
+      const res = await getFavoriteList({ page, limit })
+      if (res.data && res.data.list) {
+        favorites.value = res.data.list
+      }
+    } catch (error) {
+      console.error('加载收藏列表失败:', error)
+      // 降级到本地存储
+      const savedFavorites = localStorage.getItem('favorites')
+      if (savedFavorites) {
+        favorites.value = JSON.parse(savedFavorites)
+      }
+    }
   }
   
   // 收藏/取消收藏
-  const toggleFavorite = (music) => {
+  const toggleFavorite = async (music) => {
     const index = favorites.value.findIndex(m => m.id === music.id)
-    if (index >= 0) {
-      favorites.value.splice(index, 1)
+    
+    try {
+      if (index >= 0) {
+        // 取消收藏
+        await removeFavorite(music.id)
+        favorites.value.splice(index, 1)
+        localStorage.setItem('favorites', JSON.stringify(favorites.value))
+        return false
+      } else {
+        // 添加收藏
+        await addFavorite(music.id)
+        favorites.value.unshift(music)
+        localStorage.setItem('favorites', JSON.stringify(favorites.value))
+        return true
+      }
+    } catch (error) {
+      console.error('收藏操作失败:', error)
+      // 降级到本地存储
+      if (index >= 0) {
+        favorites.value.splice(index, 1)
+      } else {
+        favorites.value.unshift(music)
+      }
       localStorage.setItem('favorites', JSON.stringify(favorites.value))
-      return false
-    } else {
-      favorites.value.unshift(music)
-      localStorage.setItem('favorites', JSON.stringify(favorites.value))
-      return true
+      return index < 0
     }
   }
   
@@ -188,6 +375,19 @@ export const useMusicStore = defineStore('music', () => {
   const isFavorite = (musicId) => {
     return favorites.value.some(m => m.id === musicId)
   }
+  
+  // 检查收藏状态（从服务器）
+  const checkIsFavorite = async (musicId) => {
+    try {
+      const res = await checkFavorite(musicId)
+      return res.data?.is_favorite || false
+    } catch (error) {
+      console.error('检查收藏状态失败:', error)
+      return isFavorite(musicId)
+    }
+  }
+  
+  // ==================== 播放模式 ====================
   
   // 切换播放模式
   const togglePlayMode = () => {
@@ -198,37 +398,59 @@ export const useMusicStore = defineStore('music', () => {
     return playMode.value
   }
   
-  // 初始化数据（从本地存储恢复）
-  const initStore = () => {
+  // ==================== 初始化 ====================
+  
+  // 初始化数据
+  const initStore = async () => {
     try {
+      // 从本地存储恢复基本数据
       const savedPlaylist = localStorage.getItem('playlist')
       if (savedPlaylist) {
         playlist.value = JSON.parse(savedPlaylist)
-      }
-      
-      const savedHistory = localStorage.getItem('playHistory')
-      if (savedHistory) {
-        playHistory.value = JSON.parse(savedHistory)
-      }
-      
-      const savedFavorites = localStorage.getItem('favorites')
-      if (savedFavorites) {
-        favorites.value = JSON.parse(savedFavorites)
       }
       
       const savedMode = localStorage.getItem('playMode')
       if (savedMode) {
         playMode.value = savedMode
       }
+      
+      // 只在已登录时加载用户数据
+      const token = localStorage.getItem('token')
+      if (token) {
+        await Promise.all([
+          loadPlayHistory(),
+          loadFavorites()
+        ])
+      } else {
+        // 未登录时从本地存储恢复
+        const savedHistory = localStorage.getItem('playHistory')
+        if (savedHistory) {
+          playHistory.value = JSON.parse(savedHistory)
+        }
+        
+        const savedFavorites = localStorage.getItem('favorites')
+        if (savedFavorites) {
+          favorites.value = JSON.parse(savedFavorites)
+        }
+      }
     } catch (e) {
-      console.error('Failed to load from localStorage:', e)
+      console.error('初始化失败:', e)
     }
+  }
+  
+  // 重新加载用户数据（登录后调用）
+  const reloadUserData = async () => {
+    await Promise.all([
+      loadPlayHistory(),
+      loadFavorites()
+    ])
   }
   
   // 初始化
   initStore()
   
   return {
+    // 状态
     musicList,
     currentMusic,
     currentIndex,
@@ -242,17 +464,35 @@ export const useMusicStore = defineStore('music', () => {
     playMode,
     hasNext,
     hasPrev,
-    setMusicList,
+    
+    // 播放控制
     playMusic,
     togglePlay,
     playNext,
     playPrev,
     seek,
+    
+    // 播放列表
+    setMusicList,
     setPlaylist,
     addToPlaylist,
     removeFromPlaylist,
+    
+    // 播放历史
+    loadPlayHistory,
+    removeFromHistory,
+    clearHistory,
+    
+    // 收藏
+    loadFavorites,
     toggleFavorite,
     isFavorite,
-    togglePlayMode
+    checkIsFavorite,
+    
+    // 播放模式
+    togglePlayMode,
+    
+    // 重新加载
+    reloadUserData
   }
 })

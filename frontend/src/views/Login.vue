@@ -29,15 +29,17 @@
 	</div>
 </template>
 
+<script>
+export default {
+  name: 'Login'
+}
+</script>
+
 <script setup>
 	import { ref } from "vue";
-	import { useRouter, useRoute } from "vue-router";
-	import { login } from "@/api/user";
 	import { useUserStore } from "@/stores/user";
 	import { showToast } from "vant";
 
-	const router = useRouter();
-	const route = useRoute();
 	const userStore = useUserStore();
 
 	const username = ref("");
@@ -51,23 +53,10 @@
 		}
 
 		loading.value = true;
-
-		try {
-			const res = await userStore.loginUser(username.value, password.value);
-			if (res.code === 1) {
-				showToast(res.msg || "登录成功");
-				localStorage.setItem("token", res.data.token);
-				localStorage.setItem("userInfo", JSON.stringify(res.data.user));
-				userStore.isLoggedIn = true;
-				router.push("/home");
-				loading.value = false;
-			} else {
-				showToast(res.msg || "登录失败");
-				loading.value = false;
-			}
-		} catch (error) {
-			console.error("登录失败:", error);
-			showToast(error.message || "登录失败");
+		const res = await userStore.userLogin(username.value, password.value);
+		if (res) {
+			loading.value = false;
+		} else {
 			loading.value = false;
 		}
 	};

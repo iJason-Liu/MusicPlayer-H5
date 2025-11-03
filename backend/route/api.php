@@ -28,7 +28,7 @@ Route::group('music', function () {
 
 // 播放历史
 Route::group('history', function () {
-    Route::get('list', 'History/index');          // 播放历史列表
+    Route::get('list', 'History/list');          // 播放历史列表
     Route::post('add', 'History/add');            // 添加播放记录
     Route::post('delete', 'History/delete');      // 删除播放记录
     Route::post('clear', 'History/clear');        // 清空播放历史
@@ -36,7 +36,7 @@ Route::group('history', function () {
 
 // 收藏相关
 Route::group('favorite', function () {
-    Route::get('list', 'Favorite/index');         // 收藏列表
+    Route::get('list', 'Favorite/list');         // 收藏列表
     Route::post('add', 'Favorite/add');           // 添加收藏
     Route::post('remove', 'Favorite/remove');     // 取消收藏
     Route::get('check', 'Favorite/check');        // 检查是否收藏
@@ -44,11 +44,13 @@ Route::group('favorite', function () {
 
 // 播放列表
 Route::group('playlist', function () {
-    Route::get('list', 'Playlist/index');         // 播放列表
+    Route::get('list', 'Playlist/list');         // 播放列表
     Route::post('create', 'Playlist/create');     // 创建播放列表
     Route::post('update', 'Playlist/update');     // 更新播放列表
     Route::post('delete', 'Playlist/delete');     // 删除播放列表
     Route::get('detail', 'Playlist/detail');      // 播放列表详情
-    Route::post('add-music', 'Playlist/addMusic');     // 添加音乐到列表
-    Route::post('remove-music', 'Playlist/removeMusic'); // 从列表移除音乐
+    Route::post('addMusic', 'Playlist/addMusic');     // 添加音乐到列表
+    Route::post('removeMusic', 'Playlist/removeMusic'); // 从列表移除音乐
+    Route::get('getQueue', 'Playlist/getQueue');     // 获取当前播放队列
+    Route::post('saveQueue', 'Playlist/saveQueue');   // 保存当前播放队列
 });

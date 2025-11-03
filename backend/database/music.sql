@@ -119,4 +119,20 @@ CREATE TABLE `mu_playlist_music` (
   KEY `idx_music_id` (`music_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='播放列表音乐关联表';
 
+-- ----------------------------
+-- 用户配置表
+-- ----------------------------
+DROP TABLE IF EXISTS `mu_user_config`;
+CREATE TABLE `mu_user_config` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `user_id` int(11) NOT NULL COMMENT '用户ID',
+  `config_key` varchar(50) NOT NULL DEFAULT '' COMMENT '配置键',
+  `config_value` text COMMENT '配置值',
+  `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
+  `update_time` int(11) DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_key` (`user_id`,`config_key`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户配置表';
+
 SET FOREIGN_KEY_CHECKS = 1;

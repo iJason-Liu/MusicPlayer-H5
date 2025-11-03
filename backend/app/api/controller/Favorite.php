@@ -14,31 +14,51 @@ class Favorite extends Api
     protected $noNeedRight = ['*'];
     
     /**
-     * 获取收藏列表
+     * 获取收藏列表（分页）
      */
-    public function index()
+    public function list()
     {
-        $userId = $this->getUserId();
-        $page = $this->request->param('page', 1);
-        $limit = $this->request->param('limit', 20);
-        
-        $list = Db::name('favorite')
-            ->alias('f')
-            ->join('music m', 'f.music_id = m.id')
-            ->where('f.user_id', $userId)
-            ->field('m.*, f.create_time as favorite_time')
-            ->order('f.create_time', 'desc')
-            ->page($page, $limit)
-            ->select()
-            ->each(function($item) {
+        try {
+            $userId = $this->getUserId();
+            $page = $this->request->param('page', 1);
+            $limit = $this->request->param('limit', 20);
+            
+            $list = Db::name('favorite')
+                ->alias('f')
+                ->join('music m', 'f.music_id = m.id')
+                ->where('f.user_id', $userId)
+                ->field('m.*, f.create_time as favorite_time')
+                ->order('f.create_time', 'desc')
+                ->page($page, $limit)
+                ->select();
+            
+            // 转换为数组并添加URL
+            $list = $list->toArray();
+            foreach ($list as &$item) {
                 $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
                 $item['is_favorite'] = true;
-                return $item;
-            });
-        
-        $total = Db::name('favorite')->where('user_id', $userId)->count();
-        
-        return json(['code' => 1, 'msg' => 'success', 'data' => $list, 'total' => $total]);
+            }
+            
+            $total = Db::name('favorite')->where('user_id', $userId)->count();
+            
+            return json([
+                'code' => 1, 
+                'msg' => 'success', 
+                'data' => [
+                    'list' => $list,
+                    'total' => $total,
+                    'page' => (int)$page,
+                    'limit' => (int)$limit,
+                    'pages' => $total > 0 ? ceil($total / $limit) : 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json([
+                'code' => 0,
+                'msg' => '获取收藏列表失败：' . $e->getMessage(),
+                'data' => []
+            ]);
+        }
     }
     
     /**
@@ -121,15 +141,5 @@ class Favorite extends Api
             ->find();
         
         return json(['code' => 1, 'msg' => 'success', 'data' => ['is_favorite' => !empty($exists)]]);
-    }
-    
-    /**
-     * 获取当前用户ID
-     */
-    protected function getUserId()
-    {
-        $token = $this->request->header('Authorization', '');
-        // 简化处理，实际应该从 token 解析用户ID
-        return 1;
     }
 }

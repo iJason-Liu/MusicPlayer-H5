@@ -19,6 +19,12 @@ const routes = [
     meta: { title: '播放器', requiresAuth: true }
   },
   {
+    path: '/music/:id',
+    name: 'MusicDetail',
+    component: () => import('@/views/MusicDetail.vue'),
+    meta: { title: '歌曲详情', requiresAuth: true }
+  },
+  {
     path: '/mine',
     name: 'Mine',
     component: () => import('@/views/Mine.vue'),
@@ -65,17 +71,12 @@ router.beforeEach((to, from, next) => {
   // 检查是否需要登录
   if (to.meta.requiresAuth) {
     const userStore = useUserStore()
-    
-    // 如果需要登录但未登录（且非开发模式）
-    if (userStore.needLogin()) {
-      console.log('需要登录，重定向到登录页')
-      // 保存原始目标路径
+    if (!userStore.isLoggedIn) {
       next({
         path: '/login',
         query: { redirect: to.fullPath }
       })
     } else {
-      console.log('已登录，允许访问')
       next()
     }
   } else {

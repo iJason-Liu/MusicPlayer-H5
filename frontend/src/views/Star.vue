@@ -16,18 +16,30 @@
         v-for="music in favorites" 
         :key="music.id" 
         :music="music"
+        :playlist="favorites"
       />
     </div>
   </div>
 </template>
 
+<script>
+export default {
+  name: 'Star'
+}
+</script>
+
 <script setup>
-import { computed } from 'vue'
+import { computed, onActivated } from 'vue'
 import { useMusicStore } from '@/stores/music'
 import MusicItem from '@/components/MusicItem.vue'
 
 const musicStore = useMusicStore()
 const favorites = computed(() => musicStore.favorites)
+
+// 每次页面激活时刷新数据
+onActivated(() => {
+  musicStore.loadFavorites()
+})
 </script>
 
 <style lang="scss" scoped>

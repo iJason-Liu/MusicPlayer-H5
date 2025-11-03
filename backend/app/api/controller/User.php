@@ -41,8 +41,11 @@ class User extends Api
             return json(['code' => 0, 'msg' => '账号已被禁用']);
         }
         
-        // 生成 token
-        $token = $this->generateToken($user['id']);
+        // 使用 TokenService 生成 token
+        $token = \app\common\service\TokenService::createToken($user['id'], [
+            'username' => $user['username'],
+            'login_time' => time()
+        ]);
         
         // 更新登录时间
         Db::name('user')->where('id', $user['id'])->update([
@@ -55,7 +58,7 @@ class User extends Api
                 'id' => $user['id'],
                 'username' => $user['username'],
                 'nickname' => $user['nickname'] ?: $user['username'],
-                'avatar' => $user['avatar'] ?: ''
+                'avatar' =>  ($user['avatar'] ?: '')
             ]
         ];
         
@@ -86,7 +89,7 @@ class User extends Api
             'id' => $user['id'],
             'username' => $user['username'],
             'nickname' => $user['nickname'] ?: $user['username'],
-            'avatar' => $user['avatar'] ?: '',
+            'avatar' => ($user['avatar'] ?: ''),
             'stats' => $stats
         ];
         
@@ -98,36 +101,62 @@ class User extends Api
      */
     public function statistics()
     {
-        $userId = $this->getUserId();
-        
-        // 音乐总数
-        $totalMusic = Db::name('music')->where('status', 1)->count();
-        
-        // 总时长（秒）
-        $totalDuration = Db::name('music')->where('status', 1)->sum('duration');
-        
-        // 播放历史数量
-        $playCount = Db::name('play_history')->where('user_id', $userId)->count();
-        
-        // 收藏数量
-        $favoriteCount = Db::name('favorite')->where('user_id', $userId)->count();
-        
-        // 播放列表数量
-        $playlistCount = Db::name('playlist')->where('user_id', $userId)->count();
-        
-        // 总播放时长（秒）
-        $totalPlayDuration = Db::name('play_history')->where('user_id', $userId)->sum('duration');
-        
-        $data = [
-            'total_music' => $totalMusic,
-            'total_duration' => $totalDuration,
-            'play_count' => $playCount,
-            'favorite_count' => $favoriteCount,
-            'playlist_count' => $playlistCount,
-            'total_play_duration' => $totalPlayDuration
-        ];
-        
-        return json(['code' => 1, 'msg' => 'success', 'data' => $data]);
+        try {
+            $userId = $this->getUserId();
+            
+            // 音乐总数
+            $totalMusic = Db::name('music')->where('status', 1)->count();
+            
+            // 总时长（秒）
+            $totalDuration = Db::name('music')->where('status', 1)->sum('duration');
+            
+            // 播放历史数量
+            $playCount = Db::name('play_history')->where('user_id', $userId)->count();
+            
+            // 收藏数量
+            $favoriteCount = Db::name('favorite')->where('user_id', $userId)->count();
+            
+            // 播放队列数量（从用户配置表获取）
+            $playlistCount = 0;
+            $queue = Db::name('user_config')
+                ->where('user_id', $userId)
+                ->where('config_key', 'play_queue')
+                ->value('config_value');
+            
+            if ($queue) {
+                $musicIds = json_decode($queue, true);
+                if (is_array($musicIds)) {
+                    $playlistCount = count($musicIds);
+                }
+            }
+            
+            // 总播放时长（秒）- 字段名是 play_duration
+            $totalPlayDuration = Db::name('play_history')->where('user_id', $userId)->sum('play_duration');
+            
+            $data = [
+                'total_music' => (int)$totalMusic,
+                'total_duration' => (int)($totalDuration ?: 0),
+                'play_count' => (int)$playCount,
+                'favorite_count' => (int)$favoriteCount,
+                'playlist_count' => (int)$playlistCount,
+                'total_play_duration' => (int)($totalPlayDuration ?: 0)
+            ];
+            
+            return json(['code' => 1, 'msg' => 'success', 'data' => $data]);
+        } catch (\Exception $e) {
+            return json([
+                'code' => 0,
+                'msg' => '获取统计信息失败：' . $e->getMessage(),
+                'data' => [
+                    'total_music' => 0,
+                    'total_duration' => 0,
+                    'play_count' => 0,
+                    'favorite_count' => 0,
+                    'playlist_count' => 0,
+                    'total_play_duration' => 0
+                ]
+            ]);
+        }
     }
     
     /**
@@ -183,28 +212,13 @@ class User extends Api
      */
     public function logout()
     {
-        // 实际应该清除 token
-        return json(['code' => 1, 'msg' => '退出成功']);
-    }
-    
-    /**
-     * 生成 token
-     */
-    private function generateToken($userId)
-    {
-        return md5($userId . time() . uniqid());
-    }
-    
-    /**
-     * 获取当前用户ID
-     */
-    protected function getUserId()
-    {
-        // 从请求头获取 token
         $token = $this->request->header('Authorization', '');
         
-        // 这里简化处理，实际应该验证 token
-        // 可以使用 JWT 或存储在 Redis 中
-        return 1; // 临时返回固定用户ID
+        if (!empty($token)) {
+            // 使用 TokenService 删除 token
+            \app\common\service\TokenService::deleteToken($token);
+        }
+        
+        return json(['code' => 1, 'msg' => '退出成功']);
     }
 }

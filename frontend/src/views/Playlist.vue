@@ -7,7 +7,7 @@
       <div class="placeholder" v-else></div>
     </div>
     
-    <div class="content">
+    <div class="content" ref="contentRef">
       <div v-if="playlist.length === 0" class="empty">
         <i class="fas fa-list-ul"></i>
         <p>播放列表为空</p>
@@ -21,7 +21,7 @@
       >
         <div class="left" @click="handlePlay(music, index)">
           <div class="index">{{ index + 1 }}</div>
-          <img :src="music.cover" class="cover" />
+          <img :src="imgPath + music.cover" class="cover" />
           <div class="info">
             <div class="name">{{ music.name }}</div>
             <div class="artist">{{ music.artist }}</div>
@@ -30,17 +30,34 @@
         <i class="fas fa-times remove-btn" @click="removeFromPlaylist(index)"></i>
       </div>
     </div>
+    
+    <!-- 定位当前播放歌曲的悬浮按钮 -->
+    <div 
+      v-if="currentMusic && playlist.length > 0" 
+      class="locate-btn" 
+      @click="locateCurrentMusic"
+    >
+      <i class="fas fa-location-arrow"></i>
+    </div>
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
-import { useMusicStore } from '@/stores/music'
-import { showConfirmDialog, showToast } from 'vant'
+<script>
+export default {
+  name: 'Playlist'
+}
+</script>
 
+<script setup>
+import { ref, computed, onActivated, nextTick, inject } from 'vue'
+import { useMusicStore } from '@/stores/music'
+import { getPlayQueue } from '@/api'
+import { showConfirmDialog, showToast } from 'vant'
+const imgPath = inject('imgPath')
 const musicStore = useMusicStore()
 const playlist = computed(() => musicStore.playlist)
 const currentMusic = computed(() => musicStore.currentMusic)
+const contentRef = ref(null)
 
 const handlePlay = (music, index) => {
   musicStore.playMusic(music, index)
@@ -60,6 +77,65 @@ const clearPlaylist = () => {
     showToast('已清空')
   }).catch(() => {})
 }
+
+// 从接口加载播放队列
+const loadPlayQueue = async () => {
+  try {
+    const res = await getPlayQueue()
+    if (res.data && Array.isArray(res.data)) {
+      musicStore.setPlaylist(res.data)
+    }
+  } catch (error) {
+    console.error('加载播放队列失败:', error)
+    // 降级到本地存储
+    const savedPlaylist = localStorage.getItem('playlist')
+    if (savedPlaylist) {
+      try {
+        musicStore.setPlaylist(JSON.parse(savedPlaylist))
+      } catch (e) {
+        console.error('解析播放列表失败:', e)
+      }
+    }
+  }
+}
+
+// 定位到当前播放的歌曲
+const locateCurrentMusic = () => {
+  if (!currentMusic.value) {
+    showToast('当前没有播放歌曲')
+    return
+  }
+  
+  nextTick(() => {
+    const playlistItems = document.querySelectorAll('.playlist-item')
+    let targetElement = null
+    
+    playlistItems.forEach(item => {
+      if (item.classList.contains('active')) {
+        targetElement = item
+      }
+    })
+    
+    if (targetElement && contentRef.value) {
+      const containerRect = contentRef.value.getBoundingClientRect()
+      const targetRect = targetElement.getBoundingClientRect()
+      const scrollTop = contentRef.value.scrollTop
+      const offset = targetRect.top - containerRect.top + scrollTop - 100
+      
+      contentRef.value.scrollTo({
+        top: offset,
+        behavior: 'smooth'
+      })
+      
+      showToast('已定位到当前播放')
+    }
+  })
+}
+
+// 每次页面激活时从接口刷新播放列表
+onActivated(() => {
+  loadPlayQueue()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -197,6 +273,35 @@ const clearPlaylist = () => {
           transform: scale(0.9);
         }
       }
+    }
+  }
+  
+  .locate-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 180px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    
+    i {
+      font-size: 20px;
+      color: #fff;
+    }
+    
+    &:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.3);
     }
   }
 }

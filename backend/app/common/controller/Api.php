@@ -81,9 +81,15 @@ class Api
                 $this->error('请先登录', [], 401);
             }
 
-            // 验证 token
-            // 这里简化处理，实际应该验证 token 的有效性
-            // 可以使用 JWT 或 Redis 存储
+            // 验证 token 并获取用户ID
+            $userId = \app\common\service\TokenService::getUserIdByToken($token);
+            
+            if (!$userId) {
+                $this->error('登录已过期，请重新登录', [], 401);
+            }
+            
+            // 将用户ID存储到请求中，供后续使用
+            $this->request->userId = $userId;
         }
     }
 
@@ -133,19 +139,21 @@ class Api
      */
     protected function getUserId()
     {
+        // 优先从请求中获取（已在 checkAuth 中验证）
+        if (isset($this->request->userId)) {
+            return $this->request->userId;
+        }
+        
+        // 从 token 获取
         $token = $this->request->header('Authorization', '');
         
         if (empty($token)) {
             return 0;
         }
 
-        // 这里简化处理，实际应该从 token 解析用户ID
-        // 可以使用 JWT 或从 Redis 中获取
-        // 示例：
-        // $userId = cache('token:' . $token);
-        // return $userId ?: 0;
-
-        return 1; // 临时返回固定用户ID
+        $userId = \app\common\service\TokenService::getUserIdByToken($token);
+        
+        return $userId ?: 0;
     }
 
     /**

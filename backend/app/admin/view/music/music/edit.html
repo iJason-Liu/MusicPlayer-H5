@@ -1,0 +1,111 @@
+<form class="layui-form layui-card" lay-filter="form" style="padding: 20px;">
+    <div class="layui-form-item">
+        <label class="layui-form-label required">歌曲名称</label>
+        <div class="layui-input-block">
+            <input type="text" name="name" value="{$row.name}" lay-verify="required" placeholder="请输入歌曲名称" class="layui-input">
+        </div>
+    </div>
+    
+    <div class="layui-form-item">
+        <label class="layui-form-label">艺术家</label>
+        <div class="layui-input-block">
+            <input type="text" name="artist" value="{$row.artist}" placeholder="请输入艺术家" class="layui-input">
+        </div>
+    </div>
+    
+    <div class="layui-form-item">
+        <label class="layui-form-label">专辑</label>
+        <div class="layui-input-block">
+            <input type="text" name="album" value="{$row.album}" placeholder="请输入专辑" class="layui-input">
+        </div>
+    </div>
+    
+    <div class="layui-form-item">
+        <label class="layui-form-label">封面</label>
+        <div class="layui-input-block">
+            <div class="layui-upload">
+                <button type="button" class="layui-btn layui-btn-sm" id="uploadCover">
+                    <i class="layui-icon">&#xe67c;</i>上传封面
+                </button>
+                <div class="layui-upload-list" style="margin-top: 10px;">
+                    <img id="coverPreview" src="{$row.cover}" style="max-width: 200px; max-height: 200px; display: {$row.cover ? 'block' : 'none'};">
+                </div>
+            </div>
+            <input type="hidden" name="cover" id="coverInput" value="{$row.cover}">
+            <div class="layui-form-mid layui-word-aux">支持 jpg、png、gif 格式，建议尺寸 500x500</div>
+        </div>
+    </div>
+    
+    <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">歌词</label>
+        <div class="layui-input-block">
+            <textarea name="lyric" placeholder="请输入歌词" class="layui-textarea">{$row.lyric}</textarea>
+        </div>
+    </div>
+    
+    <div class="layui-form-item">
+        <label class="layui-form-label">状态</label>
+        <div class="layui-input-block">
+            <input type="radio" name="status" value="1" title="正常" {$row.status==1?'checked':''}>
+            <input type="radio" name="status" value="0" title="禁用" {$row.status==0?'checked':''}>
+        </div>
+    </div>
+    
+    <div class="layui-form-item">
+        <div class="layui-input-block">
+            <button class="layui-btn" lay-submit lay-filter="submit">提交</button>
+            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+        </div>
+    </div>
+</form>
+
+<script>
+layui.use(['form', 'layer', 'upload'], function(){
+    var form = layui.form;
+    var layer = layui.layer;
+    var upload = layui.upload;
+    var $ = layui.$;
+    
+    // 封面上传
+    upload.render({
+        elem: '#uploadCover',
+        url: '{$adminUploadUrl|default="/admin/ajax/upload"}',
+        accept: 'images',
+        acceptMime: 'image/*',
+        size: 2048, // 2MB
+        before: function(obj){
+            layer.load(1);
+        },
+        done: function(res){
+            layer.closeAll('loading');
+            if(res.code == 1){
+                var coverUrl = res.data.url;
+                $('#coverInput').val(coverUrl);
+                $('#coverPreview').attr('src', coverUrl).show();
+                layer.msg('上传成功', {icon: 1});
+            } else {
+                layer.msg(res.msg || '上传失败', {icon: 2});
+            }
+        },
+        error: function(){
+            layer.closeAll('loading');
+            layer.msg('上传失败', {icon: 2});
+        }
+    });
+    
+    // 监听提交
+    form.on('submit(submit)', function(data){
+        $.post('{:url("edit")}?id={$row.id}', data.field, function(res){
+            if(res.code == 1){
+                layer.msg(res.msg, {icon: 1}, function(){
+                    parent.layer.closeAll();
+                    parent.layui.table.reload('dataTable');
+                });
+            } else {
+                layer.msg(res.msg, {icon: 2});
+            }
+        });
+        return false;
+    });
+});
+</script>

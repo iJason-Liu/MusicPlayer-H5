@@ -13,6 +13,9 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 // 全局样式
 import './styles/index.scss'
 
+// 定义全局域名
+const imgPath = 'https://diary.crayon.vip'
+
 // 调试信息
 console.log('=== 音乐播放器启动 ===')
 console.log('环境:', import.meta.env.MODE)
@@ -35,6 +38,8 @@ app.use(Tab)
 app.use(Tabs)
 app.use(Tabbar)
 app.use(TabbarItem)
+
+app.provide('imgPath', imgPath)
 
 app.mount('#app')
 

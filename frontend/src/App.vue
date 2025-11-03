@@ -3,7 +3,9 @@
 		<div class="page-content" :class="{ 'has-tabbar': showTabbar }">
 			<router-view v-slot="{ Component }">
 				<transition name="fade" mode="out-in">
-					<component :is="Component" />
+					<keep-alive :exclude="['Player']">
+						<component :is="Component" />
+					</keep-alive>
 				</transition>
 			</router-view>
 		</div>

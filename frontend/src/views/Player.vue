@@ -1,6 +1,6 @@
 <template>
 	<div class="player-page">
-		<div class="background" :style="{ backgroundImage: `url(${currentMusic?.cover})` }"></div>
+		<div class="background" :style="{ backgroundImage: `url(${currentMusic?.cover ? imgPath + currentMusic?.cover : imgPath + '/storage/20251103/dxP1762151275usfDcB1.png'})` }"></div>
 
 		<div class="player-content">
 			<!-- 顶部操作栏 -->
@@ -11,13 +11,13 @@
 					<div class="artist">{{ currentMusic?.artist || "" }}</div>
 				</div>
 				<!-- 显示当前播放歌曲的操作 详情 -->
-				<i class="fas fa-ellipsis-v" @click="showMenu = true"></i>
+				<i class="fas fa-ellipsis-v" @click="goToDetail"></i>
 			</div>
 
 			<!-- 封面 -->
 			<div class="cover-container">
 				<div class="cover-wrapper">
-					<img :src="currentMusic?.cover || '/default-cover.jpg'" class="cover rotating" :class="{ paused: !isPlaying }" />
+					<img :src="currentMusic?.cover ? imgPath + currentMusic?.cover : imgPath + '/storage/20251103/dxP1762151275usfDcB1.png'" class="cover rotating" :class="{ paused: !isPlaying }" />
 				</div>
 			</div>
 
@@ -33,8 +33,17 @@
 
 			<!-- 进度条 -->
 			<div class="progress-container">
-				<span class="time">{{ formatTime(currentTime) }}</span>
-				<van-slider v-model="sliderValue" @change="handleSeek" :bar-height="3" active-color="#fff" inactive-color="rgba(255,255,255,0.3)" />
+				<span class="time">{{ formatTime(isDragging ? (dragValue / 100) * duration : currentTime) }}</span>
+				<van-slider 
+					v-model="sliderValue" 
+					@update:model-value="handleDragging"
+					@change="handleSeek"
+					@drag-start="handleDragStart"
+					:bar-height="4" 
+					:button-size="16"
+					active-color="#fff" 
+					inactive-color="rgba(255,255,255,0.3)" 
+				/>
 				<span class="time">{{ formatTime(duration) }}</span>
 			</div>
 
@@ -47,16 +56,26 @@
 				<i class="fas control-icon" :class="isFavorite ? 'fa-heart' : 'fa-heart'" :style="{ color: isFavorite ? '#ff4757' : '#fff' }" @click="handleFavorite"></i>
 			</div>
 		</div>
+
+
 	</div>
 </template>
 
+<script>
+export default {
+  name: 'Player'
+}
+</script>
+
 <script setup>
-	import { ref, computed, watch } from "vue";
+	import { ref, computed, watch, inject } from "vue";
+	import { useRouter } from "vue-router";
 	import { useMusicStore } from "@/stores/music";
 	import { showToast } from "vant";
 
+	const router = useRouter();
 	const musicStore = useMusicStore();
-
+	const imgPath = inject('imgPath')
 	const currentMusic = computed(() => musicStore.currentMusic);
 	const isPlaying = computed(() => musicStore.isPlaying);
 	const currentTime = computed(() => musicStore.currentTime);
@@ -66,9 +85,12 @@
 
 	const sliderValue = ref(0);
 	const parsedLyrics = ref([]);
+	const isDragging = ref(false); // 是否正在拖动
+	const dragValue = ref(0); // 拖动时的临时值
 
+	// 监听播放时间变化，只在非拖动状态下更新进度条
 	watch(currentTime, (val) => {
-		if (duration.value > 0) {
+		if (!isDragging.value && duration.value > 0) {
 			sliderValue.value = (val / duration.value) * 100;
 		}
 	});
@@ -103,9 +125,26 @@
 		musicStore.playPrev();
 	};
 
+	// 开始拖动
+	const handleDragStart = () => {
+		isDragging.value = true;
+		dragValue.value = sliderValue.value;
+	};
+
+	// 拖动中
+	const handleDragging = (value) => {
+		if (isDragging.value) {
+			dragValue.value = value;
+			sliderValue.value = value;
+		}
+	};
+
+	// 拖动结束
 	const handleSeek = (value) => {
+		isDragging.value = false;
 		const time = (value / 100) * duration.value;
 		musicStore.seek(time);
+		sliderValue.value = value;
 	};
 
 	const toggleMode = () => {
@@ -145,6 +184,15 @@
 				return { time: 0, text: line };
 			})
 			.filter((item) => item.text);
+	};
+
+	// 跳转到歌曲详情页
+	const goToDetail = () => {
+		if (!currentMusic.value) {
+			showToast('当前没有播放歌曲');
+			return;
+		}
+		router.push(`/music/${currentMusic.value.id}`);
 	};
 </script>
 
@@ -270,10 +318,30 @@
 					font-size: 12px;
 					opacity: 0.8;
 					min-width: 40px;
+					font-variant-numeric: tabular-nums;
 				}
 
 				:deep(.van-slider) {
 					flex: 1;
+					
+					.van-slider__bar {
+						transition: width 0.1s linear;
+					}
+					
+					.van-slider__button {
+						width: 16px;
+						height: 16px;
+						box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+						transition: transform 0.2s;
+						
+						&:active {
+							transform: scale(1.3);
+						}
+					}
+					
+					.van-slider__button-wrapper {
+						transition: left 0.1s linear;
+					}
 				}
 			}
 

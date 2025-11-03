@@ -2,18 +2,26 @@
 
 namespace app\admin\controller;
 
-use app\common\controller\Backend;
+use app\common\controller\AdminController;
+use app\admin\service\annotation\ControllerAnnotation;
+use app\admin\service\annotation\NodeAnnotation;
+use app\Request;
+use think\App;
 use think\facade\Db;
 
-/**
- * 控制台
- */
-class Dashboard extends Backend
+#[ControllerAnnotation(title: '控制台')]
+class Dashboard extends AdminController
 {
-    /**
-     * 首页统计
-     */
-    public function index()
+    #[NodeAnnotation(ignore: [])]
+    protected array $ignoreNode;
+
+    public function __construct(App $app)
+    {
+        parent::__construct($app);
+    }
+
+    #[NodeAnnotation(title: '首页统计')]
+    public function index(Request $request): string
     {
         // 音乐统计
         $musicStats = [
@@ -29,7 +37,7 @@ class Dashboard extends Backend
             ->limit(10)
             ->select();
         
-        $this->view->assign([
+        $this->assign([
             'musicStats' => $musicStats,
             'recentMusic' => $recentMusic,
         ]);

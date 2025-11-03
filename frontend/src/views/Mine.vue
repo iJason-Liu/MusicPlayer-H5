@@ -4,10 +4,10 @@
       <div class="user-info">
         <div class="avatar">
           <i class="fas fa-user" v-if="!userStore.isLoggedIn || userStore.userInfo?.avatar == ''"></i>
-          <img :src="userStore.userInfo?.avatar" alt="avatar" v-if="userStore.isLoggedIn && userStore.userInfo?.avatar != ''">
+          <img :src="imgPath + userStore.userInfo?.avatar" alt="avatar" v-if="userStore.isLoggedIn && userStore.userInfo?.avatar != ''">
         </div>
         <div class="info">
-          <div class="name">{{ userStore.userInfo.nickname }}</div>
+          <div class="name">{{ userStore.userInfo?.nickname || '游客' }}</div>
           <div class="desc">享受音乐，享受生活</div>
         </div>
       </div>
@@ -15,12 +15,12 @@
 
     <div class="stats">
       <div class="stat-item">
-        <div class="value">{{ musicList.length }}</div>
+        <div class="value">{{ userStore.statistics?.total_music || 0 }}</div>
         <div class="label">歌曲总数</div>
       </div>
       <div class="stat-item">
-        <div class="value">{{ formatDuration(totalDuration) }}</div>
-        <div class="label">总时长</div>
+        <div class="value">{{ formatDuration(userStore.statistics?.total_play_duration || 0) }}</div>
+        <div class="label">总播放时长</div>
       </div>
     </div>
     
@@ -31,7 +31,7 @@
           <span>播放历史</span>
         </div>
         <div class="right">
-          <span class="count">{{ playHistory.length }}</span>
+          <span class="count">{{ userStore.statistics?.play_count || 0 }}</span>
           <i class="fas fa-chevron-right"></i>
         </div>
       </div>
@@ -42,7 +42,7 @@
           <span>播放列表</span>
         </div>
         <div class="right">
-          <span class="count">{{ playlist.length }}</span>
+          <span class="count">{{ userStore.statistics?.playlist_count || 0 }}</span>
           <i class="fas fa-chevron-right"></i>
         </div>
       </div>
@@ -53,7 +53,7 @@
           <span>我的喜欢</span>
         </div>
         <div class="right">
-          <span class="count">{{ favorites.length }}</span>
+          <span class="count">{{ userStore.statistics?.favorite_count || 0 }}</span>
           <i class="fas fa-chevron-right"></i>
         </div>
       </div>
@@ -71,26 +71,21 @@
   </div>
 </template>
 
+<script>
+export default {
+  name: 'Mine'
+}
+</script>
+
 <script setup>
-import { computed } from 'vue'
+import { onActivated, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMusicStore } from '@/stores/music'
 import { useUserStore } from '@/stores/user'
 import { showConfirmDialog, showToast } from 'vant'
 
+const imgPath = inject('imgPath')
 const router = useRouter()
-const musicStore = useMusicStore()
 const userStore = useUserStore()
-
-const playHistory = computed(() => musicStore.playHistory)
-const playlist = computed(() => musicStore.playlist)
-const favorites = computed(() => musicStore.favorites)
-const musicList = computed(() => musicStore.musicList)
-
-const totalDuration = computed(() => {
-  return musicList.value.reduce((sum, music) => sum + (music.duration || 0), 0)
-})
-
 const formatDuration = (seconds) => {
   const hours = Math.floor(seconds / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
@@ -102,11 +97,21 @@ const handleLogout = () => {
     title: '退出登录',
     message: '确定要退出登录吗？',
   }).then(() => {
-    userStore.logout()
+    userStore.userLogout()
     showToast('已退出登录')
     router.replace('/login')
   }).catch(() => {})
 }
+
+onMounted(() => {
+  userStore.loadUserInfo()
+  userStore.loadStatistics()
+})
+
+// 每次页面激活时刷新数据
+onActivated(() => {
+  userStore.loadStatistics()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -148,6 +153,13 @@ const handleLogout = () => {
         i {
           font-size: 32px;
           color: #fff;
+        }
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
         }
       }
       

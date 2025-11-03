@@ -1,8 +1,8 @@
-{extend name="layout/default" /}
-{block name="content"}
-<div class="layui-card">
-    <div class="layui-card-header">音乐管理</div>
-    <div class="layui-card-body">
+<div class="layuimini-container">
+    <div class="layuimini-main">
+        <div class="layui-card">
+            <div class="layui-card-header">音乐管理</div>
+            <div class="layui-card-body"></div>
         <div class="layui-btn-group">
             <button class="layui-btn layui-btn-sm" id="btn-scan">
                 <i class="fa fa-refresh"></i> 扫描音乐文件
@@ -51,7 +51,7 @@
 
 <script type="text/html" id="coverTpl">
     {{# if(d.cover){ }}
-        <img src="{{d.cover}}" style="max-width:50px;max-height:50px;border-radius:4px;">
+        <img src="{{d.cover}}" style="max-width:45px;max-height:40px;border-radius:4px;">
     {{# } else { }}
         <span class="layui-badge layui-bg-gray">无封面</span>
     {{# } }}
@@ -62,14 +62,12 @@
     <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
 </script>
 
-{/block}
-
-{block name="script"}
 <script>
 layui.use(['table', 'form', 'layer'], function(){
     var table = layui.table;
     var form = layui.form;
     var layer = layui.layer;
+    var $ = layui.$;
     
     // 渲染表格
     var tableIns = table.render({
@@ -80,14 +78,14 @@ layui.use(['table', 'form', 'layer'], function(){
         cols: [[
             {type: 'checkbox', fixed: 'left'},
             {field: 'id', title: 'ID', width: 80, sort: true},
-            {field: 'cover', title: '封面', width: 100, templet: '#coverTpl'},
+            {field: 'cover', title: '封面', width: 80, templet: '#coverTpl'},
             {field: 'name', title: '歌曲名称', minWidth: 150},
-            {field: 'artist', title: '歌手', width: 120},
+            {field: 'artist', title: '歌手', width: 150},
             {field: 'album', title: '专辑', width: 150},
             {field: 'duration', title: '时长', width: 100},
-            {field: 'file_size', title: '文件大小', width: 100},
+            {field: 'size', title: '文件大小', width: 110, sort: true},
             {field: 'status', title: '状态', width: 100, templet: '#statusTpl'},
-            {field: 'create_time', title: '创建时间', width: 160, sort: true},
+            {field: 'create_time', title: '创建时间', width: 170, sort: true},
             {title: '操作', width: 150, fixed: 'right', toolbar: '#operateTpl'}
         ]],
         page: true,
@@ -97,11 +95,36 @@ layui.use(['table', 'form', 'layer'], function(){
     
     // 搜索
     form.on('submit(search)', function(data){
+        var field = data.field;
+        var filter = {};
+        var op = {};
+        
+        // 构建搜索参数
+        if(field.name){
+            filter.name = field.name;
+            op.name = '%*%';  // 模糊搜索
+        }
+        if(field.artist){
+            filter.artist = field.artist;
+            op.artist = '%*%';  // 模糊搜索
+        }
+        
         tableIns.reload({
-            where: data.field,
+            where: {
+                filter: JSON.stringify(filter),
+                op: JSON.stringify(op)
+            },
             page: {curr: 1}
         });
         return false;
+    });
+    
+    // 重置搜索
+    $('.layui-btn-primary[type="reset"]').click(function(){
+        tableIns.reload({
+            where: {},
+            page: {curr: 1}
+        });
     });
     
     // 扫描音乐文件
@@ -126,8 +149,8 @@ layui.use(['table', 'form', 'layer'], function(){
         layer.open({
             type: 2,
             title: '上传音乐',
-            area: ['600px', '400px'],
-            content: '{:url("upload")}'
+            area: ['620px', '450px'],
+            content: '{:url("add")}'
         });
     });
     
@@ -172,7 +195,7 @@ layui.use(['table', 'form', 'layer'], function(){
         
         layer.confirm('确定要删除选中的 ' + data.length + ' 首歌曲吗？', function(index){
             layer.close(index);
-            $.post('{:url("del")}', {ids: ids}, function(res){
+            $.post('{:url("delete")}', {id: ids}, function(res){
                 if(res.code == 1){
                     layer.msg(res.msg, {icon: 1});
                     tableIns.reload();
@@ -192,12 +215,12 @@ layui.use(['table', 'form', 'layer'], function(){
                 type: 2,
                 title: '编辑音乐',
                 area: ['800px', '600px'],
-                content: '{:url("edit")}?ids=' + data.id
+                content: '{:url("edit")}?id=' + data.id
             });
         } else if(obj.event === 'del'){
             layer.confirm('确定要删除这首歌曲吗？', function(index){
                 layer.close(index);
-                $.post('{:url("del")}', {ids: data.id}, function(res){
+                $.post('{:url("delete")}', {id: data.id}, function(res){
                     if(res.code == 1){
                         layer.msg(res.msg, {icon: 1});
                         obj.del();
@@ -210,4 +233,5 @@ layui.use(['table', 'form', 'layer'], function(){
     });
 });
 </script>
-{/block}
+    </div>
+</div>

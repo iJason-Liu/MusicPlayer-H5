@@ -14,19 +14,42 @@ class Playlist extends Api
     protected $noNeedRight = ['*'];
     
     /**
-     * 获取播放列表
+     * 获取播放列表（分页）
      */
-    public function index()
+    public function list()
     {
-        $userId = $this->getUserId();
-        
-        $list = Db::name('playlist')
-            ->where('user_id', $userId)
-            ->order('create_time', 'desc')
-            ->select()
-            ->toArray();
-        
-        return json(['code' => 1, 'msg' => 'success', 'data' => $list]);
+        try {
+            $userId = $this->getUserId();
+            $page = $this->request->param('page', 1);
+            $limit = $this->request->param('limit', 20);
+            
+            $list = Db::name('playlist')
+                ->where('user_id', $userId)
+                ->order('create_time', 'desc')
+                ->page($page, $limit)
+                ->select()
+                ->toArray();
+            
+            $total = Db::name('playlist')->where('user_id', $userId)->count();
+            
+            return json([
+                'code' => 1, 
+                'msg' => 'success', 
+                'data' => [
+                    'list' => $list,
+                    'total' => $total,
+                    'page' => (int)$page,
+                    'limit' => (int)$limit,
+                    'pages' => $total > 0 ? ceil($total / $limit) : 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json([
+                'code' => 0,
+                'msg' => '获取播放列表失败：' . $e->getMessage(),
+                'data' => []
+            ]);
+        }
     }
     
     /**
@@ -235,12 +258,92 @@ class Playlist extends Api
     }
     
     /**
-     * 获取当前用户ID
+     * 获取当前播放队列
      */
-    protected function getUserId()
+    public function getQueue()
     {
-        $token = $this->request->header('Authorization', '');
-        // 简化处理，实际应该从 token 解析用户ID
-        return 1;
+        try {
+            $userId = $this->getUserId();
+            
+            // 从用户配置表或缓存中获取播放队列
+            $queue = Db::name('user_config')
+                ->where('user_id', $userId)
+                ->where('config_key', 'play_queue')
+                ->value('config_value');
+            
+            if ($queue) {
+                $musicIds = json_decode($queue, true);
+                if (!empty($musicIds)) {
+                    // 根据音乐ID获取详细信息
+                    $musicList = Db::name('music')
+                        ->whereIn('id', $musicIds)
+                        ->select()
+                        ->each(function($item) {
+                            $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
+                            return $item;
+                        });
+                    
+                    // 按照原始顺序排序
+                    $sortedList = [];
+                    foreach ($musicIds as $id) {
+                        foreach ($musicList as $music) {
+                            if ($music['id'] == $id) {
+                                $sortedList[] = $music;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    return json(['code' => 1, 'msg' => 'success', 'data' => $sortedList]);
+                }
+            }
+            
+            return json(['code' => 1, 'msg' => 'success', 'data' => []]);
+        } catch (\Exception $e) {
+            return json(['code' => 0, 'msg' => '获取播放队列失败：' . $e->getMessage(), 'data' => []]);
+        }
+    }
+    
+    /**
+     * 保存当前播放队列
+     */
+    public function saveQueue()
+    {
+        try {
+            $userId = $this->getUserId();
+            $musicIds = $this->request->param('music_ids', []);
+            
+            if (!is_array($musicIds)) {
+                return json(['code' => 0, 'msg' => '参数格式错误']);
+            }
+            
+            // 保存到用户配置表
+            $exists = Db::name('user_config')
+                ->where('user_id', $userId)
+                ->where('config_key', 'play_queue')
+                ->find();
+            
+            if ($exists) {
+                Db::name('user_config')
+                    ->where('user_id', $userId)
+                    ->where('config_key', 'play_queue')
+                    ->update([
+                        'config_value' => json_encode($musicIds),
+                        'update_time' => time()
+                    ]);
+            } else {
+                Db::name('user_config')->insert([
+                    'user_id' => $userId,
+                    'config_key' => 'play_queue',
+                    'config_value' => json_encode($musicIds),
+                    'create_time' => time(),
+                    'update_time' => time()
+                ]);
+            }
+            
+            return json(['code' => 1, 'msg' => '保存成功']);
+        } catch (\Exception $e) {
+            return json(['code' => 0, 'msg' => '保存播放队列失败：' . $e->getMessage()]);
+        }
     }
 }
