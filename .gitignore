@@ -14,7 +14,8 @@ pnpm-lock.yaml
 
 node_modules/
 dist/
-frontend/h5
+dist/dist.zip
+frontend/h5/
 frontend/h5.zip
 *.local
 
