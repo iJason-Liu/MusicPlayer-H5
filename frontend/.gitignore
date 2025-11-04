@@ -7,9 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# 依赖锁文件（如有团队约定保留可注释掉）
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+node_modules/
+dist/
+dist-ssr/
 /frontend/h5
 /frontend/h5.zip
 *.local
@@ -17,10 +22,20 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+*.tmp
 .idea
 *.DS_Store
+.DS_Store
+*/.DS_Store
+**/.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# 压缩包 / 临时文件
+*.zip
+*.tar
+*.gz
+*.rar
