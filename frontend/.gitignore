@@ -14,9 +14,8 @@ pnpm-lock.yaml
 
 node_modules/
 dist/
-dist-ssr/
-/frontend/h5
-/frontend/h5.zip
+frontend/h5
+frontend/h5.zip
 *.local
 
 # Editor directories and files
