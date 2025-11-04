@@ -13,7 +13,7 @@
 ## 域名配置
 
 - **前端 + API**：https://diary.crayon.vip/
-- **音乐文件**：https://alist.crayon.vip/Music/
+- **音乐文件**：https://diary.crayon.vip/Music/
 
 ## 功能特性
 
@@ -24,62 +24,6 @@
 - ✅ 播放列表管理
 - ✅ 响应式设计
 - ✅ 断点续传
-- ✅ 跨域支持
-
-## 快速开始
-
-### 1. 初始化数据库
-
-```bash
-cd backend/database
-mysql -h127.0.0.1 -umusic -pKzic52W5Jc7LwhSz music < music.sql
-```
-
-### 2. 配置 Nginx CORS
-
-编辑 `alist.crayon.vip` 配置，添加：
-
-```nginx
-location /Music {
-    add_header Access-Control-Allow-Origin *;
-    add_header Access-Control-Allow-Methods 'GET, OPTIONS';
-    add_header Access-Control-Allow-Headers 'Range, Content-Type';
-    add_header Accept-Ranges bytes;
-    expires 30d;
-}
-```
-
-重启 Nginx：
-```bash
-nginx -s reload
-```
-
-### 3. 导入音乐
-
-```bash
-cd backend
-php import_music.php
-```
-
-### 4. 部署前端
-
-上传 `frontend/h5/` 目录到服务器：
-```bash
-scp -r frontend/h5/* root@your-server:/www/wwwroot/diary.crayon.vip/
-```
-
-### 5. 测试
-
-```bash
-# 测试 API
-curl https://diary.crayon.vip/api/music/list
-
-# 测试音乐文件
-curl -I https://alist.crayon.vip/Music/xxx.mp3
-
-# 访问前端
-# 浏览器打开：https://diary.crayon.vip/
-```
 
 ## 文档索引
 
@@ -212,7 +156,7 @@ DB_PREFIX=mu_
 
 编辑 `backend/import_music.php`：
 ```php
-$musicDir = '/www/wwwroot/alist/Music/';  // 音乐目录
+$musicDir = '/www/wwwroot/Music/';  // 音乐目录
 $recursive = false;                        // 是否递归扫描
 $autoParseFilename = true;                 // 自动解析文件名
 $overwriteExisting = false;                // 是否覆盖已存在
@@ -222,7 +166,7 @@ $overwriteExisting = false;                // 是否覆盖已存在
 
 ### 1. 跨域错误
 
-**解决**：在 `alist.crayon.vip` 配置 CORS，参考 [backend/CORS_CONFIG.md](backend/CORS_CONFIG.md)
+**解决**：在 `xxx.example.vip` 配置 CORS，参考 [backend/CORS_CONFIG.md](backend/CORS_CONFIG.md)
 
 ### 2. 音乐列表为空
 

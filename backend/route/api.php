@@ -54,3 +54,6 @@ Route::group('playlist', function () {
     Route::get('getQueue', 'Playlist/getQueue');     // 获取当前播放队列
     Route::post('saveQueue', 'Playlist/saveQueue');   // 保存当前播放队列
 });
+
+// 音频流传输
+Route::get('stream/audio', 'Stream/audio');      // 流式传输音频

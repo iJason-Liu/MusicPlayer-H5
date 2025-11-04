@@ -35,7 +35,7 @@ class Favorite extends Api
             // 转换为数组并添加URL
             $list = $list->toArray();
             foreach ($list as &$item) {
-                $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
+                $item['url'] = 'https://diary.crayon.vip/Music/' . $item['file_path'];
                 $item['is_favorite'] = true;
             }
             

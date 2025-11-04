@@ -39,7 +39,7 @@ class Music extends TimeModel
             return '';
         }
         
-        return request()->domain() . '/wwwroot/alist/music/' . $data['file_path'];
+        return request()-> domain() . '/Music/' . $data['file_path'];
     }
     
     // 文件大小格式化为MB（用于显示）

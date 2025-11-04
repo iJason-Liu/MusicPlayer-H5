@@ -3,8 +3,8 @@
     <div class="header">
       <div class="user-info">
         <div class="avatar">
-          <i class="fas fa-user" v-if="!userStore.isLoggedIn || userStore.userInfo?.avatar == ''"></i>
-          <img :src="imgPath + userStore.userInfo?.avatar" alt="avatar" v-if="userStore.isLoggedIn && userStore.userInfo?.avatar != ''">
+          <i class="fas fa-user" v-if="!userStore.isLoggedIn || !userStore.userInfo?.avatar"></i>
+          <img :src="getAvatarUrl(userStore.userInfo?.avatar)" alt="avatar" v-if="userStore.isLoggedIn && userStore.userInfo?.avatar">
         </div>
         <div class="info">
           <div class="name">{{ userStore.userInfo?.nickname || '游客' }}</div>
@@ -78,12 +78,11 @@ export default {
 </script>
 
 <script setup>
-import { onActivated, inject, onMounted } from 'vue'
+import { onActivated, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { showConfirmDialog, showToast } from 'vant'
-
-const imgPath = inject('imgPath')
+import { getAvatarUrl } from '@/utils/image'
 const router = useRouter()
 const userStore = useUserStore()
 const formatDuration = (seconds) => {

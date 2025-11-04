@@ -28,6 +28,12 @@ export const useMusicStore = defineStore('music', () => {
   // 音频对象
   const audio = ref(null)
   
+  // 播放时长统计
+  const playStartTime = ref(0) // 本次播放开始时间
+  const accumulatedDuration = ref(0) // 累计播放时长（秒）
+  const lastUpdateTime = ref(0) // 上次更新时间
+  const updateTimer = ref(null) // 定时更新定时器
+  
   // 计算属性
   const progress = computed(() => {
     return duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0
@@ -46,8 +52,11 @@ export const useMusicStore = defineStore('music', () => {
     if (!audio.value) {
       audio.value = new Audio()
       
-      // 允许后台播放
-      audio.value.preload = 'auto'
+      // 优化预加载策略：metadata 只加载元数据，减少初始带宽消耗
+      audio.value.preload = 'metadata'
+      
+      // 设置跨域属性，允许从其他域加载音频
+      audio.value.crossOrigin = 'anonymous'
       
       audio.value.addEventListener('timeupdate', () => {
         currentTime.value = audio.value.currentTime
@@ -64,14 +73,59 @@ export const useMusicStore = defineStore('music', () => {
       audio.value.addEventListener('error', (e) => {
         console.error('音频加载失败', e)
         isPlaying.value = false
+        
+        // 错误处理：尝试重新加载
+        if (currentMusic.value && audio.value.error) {
+          const errorCode = audio.value.error.code
+          console.error('音频错误代码:', errorCode)
+          
+          // 如果是网络错误，可以尝试重新加载
+          if (errorCode === 2 || errorCode === 4) {
+            console.log('网络错误，尝试重新加载...')
+            setTimeout(() => {
+              if (audio.value && currentMusic.value) {
+                audio.value.load()
+              }
+            }, 2000)
+          }
+        }
+      })
+      
+      // 监听缓冲进度
+      audio.value.addEventListener('progress', () => {
+        if (audio.value.buffered.length > 0) {
+          const bufferedEnd = audio.value.buffered.end(audio.value.buffered.length - 1)
+          const duration = audio.value.duration
+          if (duration > 0) {
+            const bufferedPercent = (bufferedEnd / duration) * 100
+            console.log('缓冲进度:', bufferedPercent.toFixed(2) + '%')
+          }
+        }
+      })
+      
+      // 监听等待事件（缓冲不足）
+      audio.value.addEventListener('waiting', () => {
+        console.log('缓冲中...')
+      })
+      
+      // 监听可以播放事件
+      audio.value.addEventListener('canplay', () => {
+        console.log('可以播放')
+      })
+      
+      // 监听可以流畅播放事件
+      audio.value.addEventListener('canplaythrough', () => {
+        console.log('可以流畅播放')
       })
       
       audio.value.addEventListener('play', () => {
         isPlaying.value = true
+        startPlayDurationTracking()
       })
       
       audio.value.addEventListener('pause', () => {
         isPlaying.value = false
+        pausePlayDurationTracking()
       })
       
       // 启用媒体会话 API 支持后台播放和锁屏控制
@@ -125,14 +179,87 @@ export const useMusicStore = defineStore('music', () => {
     musicList.value = list
   }
   
+  // 开始播放时长追踪
+  const startPlayDurationTracking = () => {
+    playStartTime.value = Date.now()
+    lastUpdateTime.value = Date.now()
+    
+    // 每30秒更新一次播放时长到服务器
+    if (updateTimer.value) {
+      clearInterval(updateTimer.value)
+    }
+    updateTimer.value = setInterval(() => {
+      updatePlayDuration()
+    }, 30000) // 30秒
+  }
+  
+  // 暂停播放时长追踪
+  const pausePlayDurationTracking = () => {
+    if (updateTimer.value) {
+      clearInterval(updateTimer.value)
+      updateTimer.value = null
+    }
+    // 暂停时立即更新一次
+    updatePlayDuration()
+  }
+  
+  // 更新播放时长
+  const updatePlayDuration = async () => {
+    if (!currentMusic.value || !playStartTime.value) return
+    
+    const now = Date.now()
+    const duration = Math.floor((now - lastUpdateTime.value) / 1000)
+    
+    if (duration > 0) {
+      accumulatedDuration.value += duration
+      lastUpdateTime.value = now
+      
+      // 只有累计时长超过5秒才上报（避免频繁请求）
+      if (accumulatedDuration.value >= 5) {
+        try {
+          await addPlayHistory(currentMusic.value.id, accumulatedDuration.value)
+          accumulatedDuration.value = 0 // 重置累计时长
+        } catch (error) {
+          console.error('更新播放时长失败:', error)
+        }
+      }
+    }
+  }
+  
+  // 重置播放时长追踪
+  const resetPlayDurationTracking = () => {
+    if (updateTimer.value) {
+      clearInterval(updateTimer.value)
+      updateTimer.value = null
+    }
+    
+    // 切歌前先更新当前歌曲的播放时长
+    if (accumulatedDuration.value > 0 && currentMusic.value) {
+      addPlayHistory(currentMusic.value.id, accumulatedDuration.value).catch(err => {
+        console.error('保存播放时长失败:', err)
+      })
+    }
+    
+    playStartTime.value = 0
+    accumulatedDuration.value = 0
+    lastUpdateTime.value = 0
+  }
+  
   // 播放音乐
   const playMusic = async (music, index = -1) => {
     initAudio()
+    
+    // 切歌前保存上一首的播放时长
+    resetPlayDurationTracking()
     
     currentMusic.value = music
     currentIndex.value = index >= 0 ? index : playlist.value.findIndex(m => m.id === music.id)
     
     audio.value.src = music.url
+    
+    // 保存当前播放信息到本地存储
+    localStorage.setItem('currentMusic', JSON.stringify(music))
+    localStorage.setItem('currentIndex', currentIndex.value)
     
     try {
       await audio.value.play()
@@ -140,9 +267,6 @@ export const useMusicStore = defineStore('music', () => {
       
       // 更新媒体会话信息
       updateMediaSession(music)
-      
-      // 添加到播放历史（调用API）
-      await addToHistory(music)
     } catch (error) {
       console.error('播放失败:', error)
       isPlaying.value = false
@@ -172,13 +296,16 @@ export const useMusicStore = defineStore('music', () => {
     }
   }
   
-  // 上一曲
+  // 上一曲（不执行随机策略，始终播放列表中的上一首）
   const playPrev = () => {
     if (hasPrev.value) {
+      // 播放列表中的上一首
       playMusic(playlist.value[currentIndex.value - 1], currentIndex.value - 1)
     } else if (playMode.value === 'loop') {
+      // 循环模式下，跳到最后一首
       playMusic(playlist.value[playlist.value.length - 1], playlist.value.length - 1)
     }
+    // 注意：上一曲不执行随机策略，即使在随机模式下也是顺序播放
   }
   
   // 播放结束处理
@@ -276,17 +403,11 @@ export const useMusicStore = defineStore('music', () => {
     }
   }
   
-  // 添加到播放历史
+  // 添加到播放历史（已废弃，改用 updatePlayDuration）
   const addToHistory = async (music) => {
+    // 此方法已被 updatePlayDuration 替代
+    // 保留是为了兼容性，但不再主动调用
     try {
-      // 调用API添加播放记录
-      await addPlayHistory(music.id, Math.floor(currentTime.value))
-      
-      // 不立即更新本地状态，等待用户进入播放历史页面时从服务器刷新
-      // 这样可以避免数据不一致
-    } catch (error) {
-      console.error('添加播放历史失败:', error)
-      // 降级到本地存储
       const exists = playHistory.value.findIndex(m => m.id === music.id)
       if (exists >= 0) {
         playHistory.value.splice(exists, 1)
@@ -296,6 +417,8 @@ export const useMusicStore = defineStore('music', () => {
         playHistory.value.pop()
       }
       localStorage.setItem('playHistory', JSON.stringify(playHistory.value))
+    } catch (error) {
+      console.error('添加播放历史失败:', error)
     }
   }
   
@@ -414,6 +537,25 @@ export const useMusicStore = defineStore('music', () => {
         playMode.value = savedMode
       }
       
+      // 恢复当前播放的歌曲
+      const savedCurrentMusic = localStorage.getItem('currentMusic')
+      const savedCurrentIndex = localStorage.getItem('currentIndex')
+      if (savedCurrentMusic) {
+        try {
+          currentMusic.value = JSON.parse(savedCurrentMusic)
+          currentIndex.value = savedCurrentIndex ? parseInt(savedCurrentIndex) : -1
+          
+          // 初始化音频但不自动播放
+          initAudio()
+          if (currentMusic.value && currentMusic.value.url) {
+            audio.value.src = currentMusic.value.url
+            updateMediaSession(currentMusic.value)
+          }
+        } catch (e) {
+          console.error('恢复播放状态失败:', e)
+        }
+      }
+      
       // 只在已登录时加载用户数据
       const token = localStorage.getItem('token')
       if (token) {
@@ -433,6 +575,31 @@ export const useMusicStore = defineStore('music', () => {
           favorites.value = JSON.parse(savedFavorites)
         }
       }
+      
+      // 监听页面关闭/刷新，保存播放时长
+      window.addEventListener('beforeunload', () => {
+        if (accumulatedDuration.value > 0 && currentMusic.value) {
+          // 使用 sendBeacon 确保数据能发送出去
+          const token = localStorage.getItem('token')
+          if (token) {
+            const data = new FormData()
+            data.append('music_id', currentMusic.value.id)
+            data.append('duration', accumulatedDuration.value)
+            navigator.sendBeacon('/api/history/add', data)
+          }
+        }
+      })
+      
+      // 监听页面可见性变化（切换标签页）
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // 页面隐藏时暂停追踪
+          pausePlayDurationTracking()
+        } else if (isPlaying.value) {
+          // 页面显示且正在播放时恢复追踪
+          startPlayDurationTracking()
+        }
+      })
     } catch (e) {
       console.error('初始化失败:', e)
     }

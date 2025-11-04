@@ -165,7 +165,7 @@ class Playlist extends Api
             ->order('pm.create_time', 'desc')
             ->select()
             ->each(function($item) {
-                $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
+                $item['url'] = 'https://diary.crayon.vip/Music/' . $item['file_path'];
                 return $item;
             });
         
@@ -279,7 +279,7 @@ class Playlist extends Api
                         ->whereIn('id', $musicIds)
                         ->select()
                         ->each(function($item) {
-                            $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
+                            $item['url'] = 'https://diary.crayon.vip/Music/' . $item['file_path'];
                             return $item;
                         });
                     

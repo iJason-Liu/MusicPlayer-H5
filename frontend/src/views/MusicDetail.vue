@@ -1,6 +1,6 @@
 <template>
 	<div class="music-detail-page">
-		<div class="background" :style="{ backgroundImage: `url(${musicDetail?.cover ? imgPath + musicDetail?.cover : imgPath + '/storage/20251103/dxP1762151275usfDcB1.png'})` }"></div>
+		<div class="background" :style="{ backgroundImage: `url(${getCoverUrl(musicDetail?.cover)})` }"></div>
 
 		<div class="detail-content">
 			<!-- 顶部导航栏 -->
@@ -13,7 +13,7 @@
 			<!-- 封面 -->
 			<div class="cover-section">
 				<div class="cover-wrapper">
-					<img :src="musicDetail?.cover ? imgPath + musicDetail?.cover : imgPath + '/storage/20251103/dxP1762151275usfDcB1.png'" />
+					<img :src="getCoverUrl(musicDetail?.cover)" />
 				</div>
 			</div>
 
@@ -75,16 +75,16 @@ export default {
 </script>
 
 <script setup>
-	import { ref, computed, onMounted, inject } from 'vue';
+	import { ref, computed, onMounted, watch } from 'vue';
 	import { useRoute, useRouter } from 'vue-router';
 	import { useMusicStore } from '@/stores/music';
 	import { getMusicDetail } from '@/api';
 	import { showToast } from 'vant';
+	import { getCoverUrl } from '@/utils/image';
 
 	const route = useRoute();
 	const router = useRouter();
 	const musicStore = useMusicStore();
-	const imgPath = inject('imgPath');
 
 	const musicDetail = ref(null);
 	const musicId = computed(() => route.params.id);
@@ -93,9 +93,11 @@ export default {
 	// 加载歌曲详情
 	const loadMusicDetail = async () => {
 		try {
+			console.log('加载音乐详情，ID:', musicId.value);
 			const res = await getMusicDetail(musicId.value);
 			if (res.data) {
 				musicDetail.value = res.data;
+				console.log('音乐详情加载成功:', res.data);
 			}
 		} catch (error) {
 			console.error('获取歌曲详情失败:', error);
@@ -142,7 +144,24 @@ export default {
 		}
 	};
 
+	// 监听路由参数变化，重新加载详情
+	watch(musicId, (newId, oldId) => {
+		console.log('音乐ID变化:', oldId, '->', newId);
+		if (newId && newId !== oldId) {
+			loadMusicDetail();
+		}
+	});
+
+	// 监听当前播放音乐变化（如果是从播放器进入详情页）
+	watch(() => musicStore.currentMusic, (newMusic) => {
+		if (newMusic && newMusic.id && newMusic.id.toString() === musicId.value) {
+			console.log('当前播放音乐变化，更新详情');
+			musicDetail.value = newMusic;
+		}
+	}, { deep: true });
+
 	onMounted(() => {
+		console.log('MusicDetail 页面挂载，音乐ID:', musicId.value);
 		loadMusicDetail();
 	});
 </script>

@@ -1,9 +1,10 @@
 <template>
   <div class="music-item" @click="handlePlay">
-    <img :src="imgPath + music.cover" class="cover" />
+    <img :src="getCoverUrl(music.cover)" class="cover" />
     <div class="info">
       <div class="name">{{ music.name }}</div>
-      <div class="artist">{{ music.artist }}{{ music.album }}</div>
+      <!-- {{ music.album }} -->
+      <div class="artist">{{ music.artist }}</div>
     </div>
     <div class="actions">
       <i 
@@ -18,10 +19,11 @@
 </template>
 
 <script setup>
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useMusicStore } from '@/stores/music'
 import { showToast } from 'vant'
-const imgPath = inject('imgPath')
+import { getCoverUrl } from '@/utils/image'
+
 const props = defineProps({
   music: {
     type: Object,
@@ -67,13 +69,16 @@ const showMenu = () => {
 .music-item {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   margin-bottom: 10px;
   cursor: pointer;
   transition: all 0.3s;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   
   &:active {
     transform: scale(0.98);
@@ -91,7 +96,9 @@ const showMenu = () => {
   
   .info {
     flex: 1;
+    min-width: 0;
     overflow: hidden;
+    margin-right: 12px;
     
     .name {
       font-size: 15px;
@@ -115,6 +122,7 @@ const showMenu = () => {
   .actions {
     display: flex;
     gap: 15px;
+    flex-shrink: 0;
     
     .action-icon {
       font-size: 18px;

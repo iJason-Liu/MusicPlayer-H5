@@ -32,10 +32,11 @@ class Music extends AdminController
         $this->checkPostRequest();
         
         try {
-            $musicPath = public_path('storage/music');
+            // 音乐文件目录
+            $musicPath = '/www/wwwroot/Music';
             
             if (!is_dir($musicPath)) {
-                return json(['code' => 0, 'msg' => '音乐目录不存在']);
+                return json(['code' => 0, 'msg' => '音乐目录不存在：' . $musicPath]);
             }
             
             $files = scandir($musicPath);
@@ -59,9 +60,8 @@ class Music extends AdminController
                     continue;
                 }
                 
-                // 检查是否已存在
-                $relativePath = 'music/' . $file;
-                $exists = self::$model::where('file_path', $relativePath)->find();
+                // 检查是否已存在（使用文件名作为路径）
+                $exists = self::$model::where('file_path', $file)->find();
                 
                 if ($exists) {
                     continue;
@@ -75,11 +75,11 @@ class Music extends AdminController
                     list($artist, $name) = explode(' - ', $name, 2);
                 }
                 
-                // 添加到数据库
+                // 添加到数据库（file_path 只存储文件名）
                 self::$model::create([
                     'name' => $name,
                     'artist' => $artist,
-                    'file_path' => $relativePath,
+                    'file_path' => $file,
                     'size' => filesize($filePath),
                     'format' => $ext,
                     'status' => 1,
@@ -159,45 +159,117 @@ class Music extends AdminController
     #[NodeAnnotation(title: '匹配信息', auth: true)]
     public function match(Request $request): Json
     {
-        $this->checkPostRequest();
-        
-        $ids = $request->param('ids', '');
-        
-        if (empty($ids)) {
-            return json(['code' => 0, 'msg' => '请选择要匹配的音乐']);
-        }
-        
-        $idArray = is_array($ids) ? $ids : explode(',', $ids);
-        $musicList = self::$model::whereIn('id', $idArray)->select();
-        
-        if ($musicList->isEmpty()) {
-            return json(['code' => 0, 'msg' => '未找到音乐']);
-        }
-        
-        $successCount = 0;
-        $failCount = 0;
-        
-        foreach ($musicList as $music) {
-            try {
-                // 这里可以调用第三方API获取音乐信息
-                // 暂时使用简单的逻辑：如果有歌手和歌名，就认为匹配成功
-                if (!empty($music->name)) {
-                    // 模拟匹配成功，实际应该调用API
-                    $successCount++;
+        try {
+            $this->checkPostRequest();
+            
+            $ids = $request->param('ids', '');
+            
+            if (empty($ids)) {
+                return json(['code' => 0, 'msg' => '请选择要匹配的音乐']);
+            }
+            
+            // 检查 getID3 是否可用
+            if (!class_exists('getID3')) {
+                $getid3Path = root_path('vendor/james-heinrich/getid3/getid3/getid3.php');
+                if (!file_exists($getid3Path)) {
+                    return json(['code' => 0, 'msg' => 'getID3 库未安装，请先安装：composer require james-heinrich/getid3']);
+                }
+            }
+            
+            $idArray = is_array($ids) ? $ids : explode(',', $ids);
+            $musicList = self::$model::whereIn('id', $idArray)->select();
+            
+            if ($musicList->isEmpty()) {
+                return json(['code' => 0, 'msg' => '未找到音乐']);
+            }
+            
+            $successCount = 0;
+            $failCount = 0;
+            $details = [];
+            
+            foreach ($musicList as $music) {
+                try {
+                    trace('准备匹配音乐: ' . $music->name . ', 文件路径: ' . $music->file_path, 'info');
+                    
+                    // 使用 getID3 提取音乐信息（直接传递相对路径）
+                    $info = \app\common\service\MusicInfoService::extractMusicInfo($music->file_path);
+                
+                if ($info) {
+                    $updateData = [];
+                    
+                    // 只更新空字段
+                    if (empty($music->name) && !empty($info['title'])) {
+                        $updateData['name'] = $info['title'];
+                    }
+                    
+                    if (empty($music->artist) && !empty($info['artist'])) {
+                        $updateData['artist'] = $info['artist'];
+                    }
+                    
+                    if (empty($music->album) && !empty($info['album'])) {
+                        $updateData['album'] = $info['album'];
+                    }
+                    
+                    // 更新时长
+                    if (!empty($info['duration'])) {
+                        $updateData['duration'] = $info['duration'];
+                    }
+                    
+                    // 更新歌词（只在为空时更新）
+                    if (empty($music->lyric) && !empty($info['lyric'])) {
+                        $updateData['lyric'] = $info['lyric'];
+                    }
+                    
+                    // 处理封面
+                    if (empty($music->cover) && !empty($info['cover'])) {
+                        $coverPath = \app\common\service\MusicInfoService::saveCover($info['cover'], $music->id);
+                        if ($coverPath) {
+                            $updateData['cover'] = $coverPath;
+                        }
+                    }
+                    
+                    // 更新数据库
+                    if (!empty($updateData)) {
+                        $music->save($updateData);
+                        $successCount++;
+                        $details[] = "✓ {$music->name}";
+                    } else {
+                        $details[] = "- {$music->name}（无需更新）";
+                    }
                 } else {
                     $failCount++;
+                    $details[] = "✗ {$music->name}（识别失败）";
                 }
             } catch (\Exception $e) {
                 $failCount++;
+                $details[] = "✗ {$music->name}（错误：{$e->getMessage()}）";
+                trace('匹配音乐信息失败: ' . $e->getMessage(), 'error');
             }
         }
         
-        $msg = "匹配完成：成功 {$successCount} 首";
-        if ($failCount > 0) {
-            $msg .= "，失败 {$failCount} 首";
+            $msg = "匹配完成：成功 {$successCount} 首";
+            if ($failCount > 0) {
+                $msg .= "，失败 {$failCount} 首";
+            }
+            
+            return json([
+                'code' => 1, 
+                'msg' => $msg,
+                'data' => [
+                    'success' => $successCount,
+                    'fail' => $failCount,
+                    'details' => $details
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            trace('匹配操作失败: ' . $e->getMessage(), 'error');
+            trace('错误堆栈: ' . $e->getTraceAsString(), 'error');
+            return json([
+                'code' => 0, 
+                'msg' => '匹配失败：' . $e->getMessage()
+            ]);
         }
-        
-        return json(['code' => 1, 'msg' => $msg]);
     }
 
     #[NodeAnnotation(title: '状态切换', auth: true)]

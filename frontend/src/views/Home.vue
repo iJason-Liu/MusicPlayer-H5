@@ -11,6 +11,7 @@
         shape="round"
         background="transparent"
         @search="handleSearch"
+        @keyup.enter="handleSearch"
       />
     </div>
     
@@ -142,11 +143,16 @@ const loadMusicList = async () => {
       total.value = totalCount
       
       // 判断是否还有更多数据
-      if (displayList.value.length >= totalCount) {
+      // 如果本次返回的数据少于请求的数量，说明没有更多了
+      if (musicData.length < limit.value || displayList.value.length >= totalCount) {
         finished.value = true
+        console.log(`✅ 音乐列表加载完成，当前${displayList.value.length}首，共${totalCount}首`)
+      } else {
+        finished.value = false
+        // 加载成功且还有更多数据，页码+1，准备下次加载
+        page.value++
+        console.log(`✅ 音乐列表加载成功，当前${displayList.value.length}首，共${totalCount}首，准备加载第${page.value}页`)
       }
-      
-      console.log(`✅ 音乐列表加载成功，当前${displayList.value.length}首，共${totalCount}首`)
     } else {
       if (page.value === 1) {
         console.warn('⚠️ 暂无音乐数据')
@@ -158,7 +164,8 @@ const loadMusicList = async () => {
     console.error('❌ 加载音乐列表失败:', error)
     console.error('错误详情:', error.response || error.message)
     showToast('加载失败，请稍后重试')
-    finished.value = true
+    // 加载失败时不设置finished，允许用户重试
+    // finished.value = true
   } finally {
     loading.value = false
   }
@@ -198,32 +205,33 @@ const handleSearch = async () => {
 }
 
 const onLoad = () => {
-  // console.log('onLoad', page.value, displayList.value.length, finished.value, loading.value)
-  // 如果是第一页且列表为空，说明是首次加载
-  if (page.value === 1 && displayList.value.length === 0) {
-    loadMusicList()
-  } else if (!finished.value && loading.value) {
-    // console.log('触底加载下一页')
-    // 触底加载下一页
-    page.value++
-    loadMusicList()
+  console.log('onLoad 触发', { page: page.value, loading: loading.value, finished: finished.value, listLength: displayList.value.length })
+  
+  // 如果已经加载完成，不再加载
+  if (finished.value) {
+    console.log('已加载完成，跳过')
+    return
   }
+  
+  // 加载当前页
+  // 注意：不检查 loading.value，因为 van-list 组件会自动管理 loading 状态
+  // 组件会在 loading 变为 false 后才触发下一次 onLoad
+  loadMusicList()
 }
 
 onMounted(() => {
   console.log('=== Home.vue 已挂载 ===')
-  // 只在首次挂载且列表为空时加载
-  if (displayList.value.length === 0) {
-    loadMusicList()
-  }
+  // 首次挂载时不需要手动加载，van-list 会自动触发 onLoad
 })
 </script>
 
 <style lang="scss" scoped>
 .home-page {
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
   
   .header {
     flex-shrink: 0;
@@ -269,7 +277,10 @@ onMounted(() => {
   .content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 16px 75px;
+    width: 100%;
+    box-sizing: border-box;
     
     &::-webkit-scrollbar {
       width: 4px;

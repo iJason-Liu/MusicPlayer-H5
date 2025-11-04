@@ -86,7 +86,8 @@ export const logout = () => {
 
 // 获取音乐列表（不分页）
 export const getMusicList = (params = {}) => {
-  return request.get('/music/list', { params })
+  // 禁用流式传输，使用 Nginx 直接访问
+  return request.get('/music/list', { params: { ...params, stream: 0 } })
 }
 
 // 获取音乐列表（分页）
@@ -96,7 +97,7 @@ export const getMusicListPage = (params = {}) => {
 
 // 搜索音乐
 export const searchMusic = (keyword) => {
-  return request.get('/music/search', { params: { keyword } })
+  return request.get('/music/search', { params: { keyword, stream: 0 } })
 }
 
 // 获取音乐详情
@@ -106,12 +107,12 @@ export const getMusicDetail = (id) => {
 
 // 获取推荐音乐
 export const getRecommendMusic = (limit = 10) => {
-  return request.get('/music/recommend', { params: { limit } })
+  return request.get('/music/recommend', { params: { limit, stream: 0 } })
 }
 
 // 获取热门音乐
 export const getHotMusic = (limit = 20) => {
-  return request.get('/music/hot', { params: { limit } })
+  return request.get('/music/hot', { params: { limit, stream: 0 } })
 }
 
 // ==================== 播放历史相关 ====================

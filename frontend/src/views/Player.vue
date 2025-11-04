@@ -1,6 +1,6 @@
 <template>
 	<div class="player-page">
-		<div class="background" :style="{ backgroundImage: `url(${currentMusic?.cover ? imgPath + currentMusic?.cover : imgPath + '/storage/20251103/dxP1762151275usfDcB1.png'})` }"></div>
+		<div class="background" :style="{ backgroundImage: `url(${getCoverUrl(currentMusic?.cover)})` }"></div>
 
 		<div class="player-content">
 			<!-- 顶部操作栏 -->
@@ -17,7 +17,7 @@
 			<!-- 封面 -->
 			<div class="cover-container">
 				<div class="cover-wrapper">
-					<img :src="currentMusic?.cover ? imgPath + currentMusic?.cover : imgPath + '/storage/20251103/dxP1762151275usfDcB1.png'" class="cover rotating" :class="{ paused: !isPlaying }" />
+					<img :src="getCoverUrl(currentMusic?.cover)" class="cover rotating" :class="{ paused: !isPlaying }" />
 				</div>
 			</div>
 
@@ -56,8 +56,6 @@
 				<i class="fas control-icon" :class="isFavorite ? 'fa-heart' : 'fa-heart'" :style="{ color: isFavorite ? '#ff4757' : '#fff' }" @click="handleFavorite"></i>
 			</div>
 		</div>
-
-
 	</div>
 </template>
 
@@ -68,14 +66,14 @@ export default {
 </script>
 
 <script setup>
-	import { ref, computed, watch, inject } from "vue";
+	import { ref, computed, watch } from "vue";
 	import { useRouter } from "vue-router";
 	import { useMusicStore } from "@/stores/music";
 	import { showToast } from "vant";
+	import { getCoverUrl } from "@/utils/image";
 
 	const router = useRouter();
 	const musicStore = useMusicStore();
-	const imgPath = inject('imgPath')
 	const currentMusic = computed(() => musicStore.currentMusic);
 	const isPlaying = computed(() => musicStore.isPlaying);
 	const currentTime = computed(() => musicStore.currentTime);

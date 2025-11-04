@@ -4,7 +4,7 @@
       <div class="progress" :style="{ width: progress + '%' }"></div>
     </div>
     <div class="mini-player-content">
-      <img :src="imgPath + currentMusic.cover" class="cover rotating" :class="{ paused: !isPlaying }" />
+      <img :src="getCoverUrl(currentMusic?.cover)" class="cover rotating" :class="{ paused: !isPlaying }" />
       <div class="info">
         <div class="name">{{ currentMusic.name }}</div>
         <div class="artist">{{ currentMusic.artist }}</div>
@@ -22,10 +22,11 @@
 </template>
 
 <script setup>
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMusicStore } from '@/stores/music'
-const imgPath = inject('imgPath')
+import { getCoverUrl } from '@/utils/image'
+
 const router = useRouter()
 const musicStore = useMusicStore()
 

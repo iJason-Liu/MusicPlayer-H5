@@ -28,7 +28,7 @@
         
         <div class="layui-form-mid layui-word-aux" style="margin-top: 10px;">
             <p><strong>支持格式：</strong>mp3、flac、wav、m4a</p>
-            <p><strong>文件大小：</strong>最大 50MB</p>
+            <p><strong>文件大小：</strong>最大 200MB</p>
             <p><strong>文件命名：</strong>建议使用"艺术家 - 歌曲名.mp3"格式，系统会自动识别</p>
             <p><strong>上传后：</strong>可以点击"编辑"手动补充信息，或点击"匹配"自动获取歌曲信息</p>
         </div>
@@ -49,7 +49,7 @@ layui.use(['upload', 'layer'], function(){
         url: '{:url("upload")}',
         accept: 'file',
         acceptMime: 'audio/*,.mp3,.flac,.wav,.m4a',
-        size: 51200, // 50MB
+        size: 204800, // 200MB
         multiple: true,
         auto: true,
         before: function(obj){

@@ -58,6 +58,9 @@
 </script>
 
 <script type="text/html" id="operateTpl">
+    <a class="layui-btn layui-btn-xs layui-btn-normal play-btn" lay-event="play" data-id="{{d.id}}" title="播放">
+        <i class="fa fa-play"></i>
+    </a>
     <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
     <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
 </script>
@@ -86,7 +89,7 @@ layui.use(['table', 'form', 'layer'], function(){
             {field: 'size', title: '文件大小', width: 110, sort: true},
             {field: 'status', title: '状态', width: 100, templet: '#statusTpl'},
             {field: 'create_time', title: '创建时间', width: 170, sort: true},
-            {title: '操作', width: 150, fixed: 'right', toolbar: '#operateTpl'}
+            {title: '操作', width: 200, fixed: 'right', toolbar: '#operateTpl'}
         ]],
         page: true,
         limit: 20,
@@ -125,6 +128,14 @@ layui.use(['table', 'form', 'layer'], function(){
             where: {},
             page: {curr: 1}
         });
+    });
+    
+    // 监听输入框回车事件
+    $('#toolbar input').on('keydown', function(e){
+        if(e.keyCode === 13){
+            e.preventDefault();
+            $('button[lay-filter="search"]').trigger('click');
+        }
     });
     
     // 扫描音乐文件
@@ -210,7 +221,10 @@ layui.use(['table', 'form', 'layer'], function(){
     table.on('tool(dataTable)', function(obj){
         var data = obj.data;
         
-        if(obj.event === 'edit'){
+        if(obj.event === 'play'){
+            // 播放音乐
+            playMusic(data);
+        } else if(obj.event === 'edit'){
             layer.open({
                 type: 2,
                 title: '编辑音乐',
@@ -231,6 +245,84 @@ layui.use(['table', 'form', 'layer'], function(){
             });
         }
     });
+    
+    // 播放音乐功能
+    var currentAudio = null;
+    var currentPlayingId = null;
+    
+    // 更新播放按钮状态
+    function updatePlayButton(id, isPlaying) {
+        // 重置所有按钮
+        $('.play-btn').each(function() {
+            $(this).removeClass('layui-btn-danger').addClass('layui-btn-normal');
+            $(this).find('i').removeClass('fa-pause').addClass('fa-play');
+            $(this).attr('title', '播放');
+        });
+        
+        // 更新当前播放按钮
+        if(isPlaying && id) {
+            var btn = $('.play-btn[data-id="' + id + '"]');
+            btn.removeClass('layui-btn-normal').addClass('layui-btn-danger');
+            btn.find('i').removeClass('fa-play').addClass('fa-pause');
+            btn.attr('title', '暂停');
+        }
+    }
+    
+    function playMusic(data) {
+        // 构建音乐 URL
+        var musicUrl = 'https://diary.crayon.vip/Music/' + encodeURIComponent(data.file_path);
+        
+        // 如果正在播放同一首歌，则暂停
+        if(currentAudio && currentPlayingId === data.id) {
+            if(currentAudio.paused) {
+                currentAudio.play();
+                updatePlayButton(data.id, true);
+                layer.msg('继续播放: ' + data.name, {icon: 1, time: 1500});
+            } else {
+                currentAudio.pause();
+                updatePlayButton(data.id, false);
+                layer.msg('已暂停', {icon: 0, time: 1000});
+            }
+            return;
+        }
+        
+        // 停止之前的播放
+        if(currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+            updatePlayButton(null, false);
+        }
+        
+        // 创建新的音频对象
+        currentAudio = new Audio(musicUrl);
+        currentPlayingId = data.id;
+        
+        // 播放
+        currentAudio.play().then(function() {
+            updatePlayButton(data.id, true);
+            layer.msg('正在播放: ' + data.name, {icon: 1, time: 1500});
+        }).catch(function(error) {
+            layer.msg('播放失败: ' + error.message, {icon: 2});
+            console.error('播放失败:', error);
+            currentPlayingId = null;
+            updatePlayButton(null, false);
+        });
+        
+        // 播放结束事件
+        currentAudio.addEventListener('ended', function() {
+            layer.msg('播放完成', {icon: 1, time: 1000});
+            currentPlayingId = null;
+            updatePlayButton(null, false);
+        });
+        
+        // 错误事件
+        currentAudio.addEventListener('error', function(e) {
+            layer.msg('播放出错', {icon: 2});
+            console.error('音频错误:', e);
+            currentPlayingId = null;
+            updatePlayButton(null, false);
+        });
+    }
 });
 </script>
     </div>

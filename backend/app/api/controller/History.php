@@ -23,24 +23,27 @@ class History extends Api
             $page = $this->request->param('page', 1);
             $limit = $this->request->param('limit', 20);
             
-            // 获取最近播放的音乐（去重）
+            // 获取最近播放的音乐（去重，并统计累计播放时长）
             $subQuery = Db::name('play_history')
                 ->where('user_id', $userId)
-                ->field('music_id, MAX(create_time) as last_play_time, COUNT(id) as play_count')
+                ->field('music_id, MAX(create_time) as last_play_time, COUNT(id) as play_count, SUM(play_duration) as total_duration')
                 ->group('music_id')
                 ->buildSql();
             
             $list = Db::table($subQuery . ' h')
                 ->join('music m', 'h.music_id = m.id')
-                ->field('m.*, h.last_play_time, h.play_count')
+                ->field('m.*, h.last_play_time, h.play_count, h.total_duration')
                 ->order('h.last_play_time', 'desc')
                 ->page($page, $limit)
                 ->select();
             
-            // 转换为数组并添加URL
+            // 转换为数组并添加URL和格式化播放时长
             $list = $list->toArray();
             foreach ($list as &$item) {
-                $item['url'] = 'https://alist.crayon.vip/Music/' . $item['file_path'];
+                $item['url'] = 'https://diary.crayon.vip/Music/' . $item['file_path'];
+                // 格式化累计播放时长
+                $item['total_duration'] = (int)$item['total_duration'];
+                $item['total_duration_text'] = $this->formatDuration($item['total_duration']);
             }
             
             // 统计总数（去重后的音乐数量）
@@ -66,6 +69,24 @@ class History extends Api
                 'msg' => '获取播放历史失败：' . $e->getMessage(),
                 'data' => []
             ]);
+        }
+    }
+    
+    /**
+     * 格式化播放时长
+     */
+    private function formatDuration($seconds)
+    {
+        if ($seconds < 60) {
+            return $seconds . '秒';
+        } elseif ($seconds < 3600) {
+            $minutes = floor($seconds / 60);
+            $secs = $seconds % 60;
+            return $minutes . '分' . ($secs > 0 ? $secs . '秒' : '');
+        } else {
+            $hours = floor($seconds / 3600);
+            $minutes = floor(($seconds % 3600) / 60);
+            return $hours . '小时' . ($minutes > 0 ? $minutes . '分' : '');
         }
     }
     

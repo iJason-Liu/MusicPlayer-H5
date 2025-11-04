@@ -14,13 +14,32 @@ class Music extends Api
     
     /**
      * 获取音乐文件 URL
-     * 音乐文件在独立域名：https://alist.crayon.vip/Music/
+     * 支持两种模式：
+     * 1. 流式传输（推荐）：通过后端 API 支持 Range 请求
+     * 2. 直接访问：直接通过 Web 服务器访问
      */
-    private function getMusicUrl($filePath)
+    private function getMusicUrl($filePath, $musicId = null, $useStream = false)
     {
-        return 'https://alist.crayon.vip/Music/' . $filePath;
+        if (empty($filePath)) {
+            return '';
+        }
+        
+        // 如果启用流式传输且有音乐ID
+        if ($useStream && $musicId) {
+            // 返回流式传输 API 地址
+            return '/api/stream/audio?id=' . $musicId;
+        }
+        
+        // 对文件路径进行 URL 编码，支持中文文件名
+        $pathParts = explode('/', $filePath);
+        $encodedParts = array_map('rawurlencode', $pathParts);
+        $encodedPath = implode('/', $encodedParts);
+        
+        // 直接拼接域名和 Music 目录路径
+        return 'https://diary.crayon.vip/Music/' . $encodedPath;
     }
     
+
     /**
      * 获取音乐列表
      */
@@ -45,8 +64,9 @@ class Music extends Api
             
             // 转换为数组并添加URL
             $list = $list->toArray();
+            $useStream = $this->request->param('stream', 0); // 是否使用流式传输
             foreach ($list as &$item) {
-                $item['url'] = $this->getMusicUrl($item['file_path']);
+                $item['url'] = $this->getMusicUrl($item['file_path'], $item['id'], $useStream);
             }
             
             $total = Db::name('music')->where($where)->count();
@@ -82,13 +102,14 @@ class Music extends Api
             return json(['code' => 0, 'msg' => '请输入搜索关键词']);
         }
         
+        $useStream = $this->request->param('stream', 0);
         $list = Db::name('music')
             ->where('status', 1)
             ->where('name|artist|album', 'like', '%' . $keyword . '%')
             ->limit(50)
             ->select()
-            ->each(function($item) {
-                $item['url'] = $this->getMusicUrl($item['file_path']);
+            ->each(function($item) use ($useStream) {
+                $item['url'] = $this->getMusicUrl($item['file_path'], $item['id'], $useStream);
                 return $item;
             });
         
@@ -112,7 +133,8 @@ class Music extends Api
             return json(['code' => 0, 'msg' => '音乐不存在']);
         }
         
-        $music['url'] = $this->getMusicUrl($music['file_path']);
+        $useStream = $this->request->param('stream', 0);
+        $music['url'] = $this->getMusicUrl($music['file_path'], $music['id'], $useStream);
         
         // 检查是否收藏
         $userId = $this->getUserId();
@@ -136,13 +158,14 @@ class Music extends Api
     {
         $limit = $this->request->param('limit', 10);
         
+        $useStream = $this->request->param('stream', 0);
         $list = Db::name('music')
             ->where('status', 1)
             ->orderRaw('RAND()')
             ->limit($limit)
             ->select()
-            ->each(function($item) {
-                $item['url'] = $this->getMusicUrl($item['file_path']);
+            ->each(function($item) use ($useStream) {
+                $item['url'] = $this->getMusicUrl($item['file_path'], $item['id'], $useStream);
                 return $item;
             });
         
@@ -156,6 +179,7 @@ class Music extends Api
     {
         $limit = $this->request->param('limit', 20);
         
+        $useStream = $this->request->param('stream', 0);
         $list = Db::name('music')
             ->alias('m')
             ->leftJoin('play_history h', 'm.id = h.music_id')
@@ -165,8 +189,8 @@ class Music extends Api
             ->order('play_count', 'desc')
             ->limit($limit)
             ->select()
-            ->each(function($item) {
-                $item['url'] = $this->getMusicUrl($item['file_path']);
+            ->each(function($item) use ($useStream) {
+                $item['url'] = $this->getMusicUrl($item['file_path'], $item['id'], $useStream);
                 return $item;
             });
         

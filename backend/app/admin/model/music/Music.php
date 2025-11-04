@@ -39,7 +39,24 @@ class Music extends TimeModel
             return '';
         }
         
-        return request()->domain() . '/wwwroot/alist/music/' . $data['file_path'];
+        // 音乐文件通过 /Music/ 路径访问（宝塔公共目录）
+        return request()->domain() . '/Music/' . $data['file_path'];
+    }
+    
+    // 封面URL
+    public function getCoverAttr($value, $data)
+    {
+        if (empty($value)) {
+            return '';
+        }
+        
+        // 如果已经是完整URL，直接返回
+        if (strpos($value, 'http') === 0) {
+            return $value;
+        }
+        
+        // 封面图片通过 /Music/ 路径访问
+        return request()->domain() . '/Music/' . $value;
     }
     
     // 文件大小格式化为MB（用于显示）
