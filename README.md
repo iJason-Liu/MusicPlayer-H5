@@ -1,19 +1,19 @@
 # 音乐播放器项目
 
-一个基于 Vue 3 + ThinkPHP 6 的在线音乐播放器。
+一个基于 Vue 3 + ThinkPHP 8 的在线音乐播放器。
 
 ## 项目架构
 
 ```
 前端：Vue 3 + Vite + Vant UI
-后端：ThinkPHP 6 + MySQL
+后端：ThinkPHP 8 + MySQL
 音乐：独立域名存储
 ```
 
 ## 域名配置
 
 - **前端 + API**：https://diary.crayon.vip/
-- **音乐文件**：https://diary.crayon.vip/Music/
+- **音乐文件**：BT公共目录
 
 ## 功能特性
 
@@ -24,25 +24,6 @@
 - ✅ 播放列表管理
 - ✅ 响应式设计
 - ✅ 断点续传
-
-## 文档索引
-
-### 快速指南
-- **立即部署**：[DEPLOY_NOW.md](DEPLOY_NOW.md) - 5 步快速部署
-- **使用指南**：[HOW_TO_USE.md](HOW_TO_USE.md) - 导入音乐工具使用
-
-### 详细文档
-- **前后端整合**：[FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md)
-- **API 文档**：[backend/API.md](backend/API.md)
-- **CORS 配置**：[backend/CORS_CONFIG.md](backend/CORS_CONFIG.md)
-- **部署文档**：[backend/DEPLOY.md](backend/DEPLOY.md)
-- **快速开始**：[backend/QUICK_START.md](backend/QUICK_START.md)
-- **导入指南**：[backend/IMPORT_MUSIC_GUIDE.md](backend/IMPORT_MUSIC_GUIDE.md)
-
-### 检查清单
-- **部署检查**：[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
-- **配置总结**：[FINAL_CONFIG_SUMMARY.md](FINAL_CONFIG_SUMMARY.md)
-- **完成总结**：[BACKEND_COMPLETE.md](BACKEND_COMPLETE.md)
 
 ## 目录结构
 
@@ -66,9 +47,6 @@
 │   │   └── music.sql        # 数据库表结构
 │   ├── route/
 │   │   └── api.php          # 路由配置
-│   └── import_music.php     # 音乐导入工具
-│
-└── docs/                    # 文档
 ```
 
 ## 技术栈
@@ -82,9 +60,9 @@
 - Axios
 
 ### 后端
-- ThinkPHP 6
-- MySQL 5.7+
-- PHP 7.2+
+- ThinkPHP 8
+- MySQL 8.0+
+- PHP 8.3+
 
 ### 服务器
 - Nginx
@@ -129,8 +107,6 @@
 - `GET /api/playlist/detail` - 播放列表详情
 - `POST /api/playlist/add-music` - 添加音乐到列表
 
-详细 API 文档：[backend/API.md](backend/API.md)
-
 ## 配置说明
 
 ### 前端配置
@@ -166,11 +142,11 @@ $overwriteExisting = false;                // 是否覆盖已存在
 
 ### 1. 跨域错误
 
-**解决**：在 `xxx.example.vip` 配置 CORS，参考 [backend/CORS_CONFIG.md](backend/CORS_CONFIG.md)
+**解决**：在 `xxx.example.vip` 配置 CORS
 
 ### 2. 音乐列表为空
 
-**解决**：运行 `php import_music.php` 导入音乐
+**解决**：后端运行 扫描音乐 导入音乐
 
 ### 3. API 返回 404
 
@@ -179,8 +155,6 @@ $overwriteExisting = false;                // 是否覆盖已存在
 ### 4. 前端页面空白
 
 **解决**：检查前端文件是否上传，查看浏览器控制台错误
-
-详细问题排查：[FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md)
 
 ## 性能优化
 
@@ -202,12 +176,12 @@ $overwriteExisting = false;                // 是否覆盖已存在
 ## 开发计划
 
 - [ ] 用户注册功能
+- [ ] 歌单创建
+- [ ] 断点续播
 - [ ] 音乐上传功能
 - [ ] 歌词显示
-- [ ] 评论功能
 - [ ] 分享功能
 - [ ] 移动端优化
-- [ ] PWA 支持
 
 ## 许可证
 
@@ -219,6 +193,7 @@ Jason Liu
 
 ## 致谢
 
+- EasyAdmin8
 - Vue.js
 - ThinkPHP
 - Vant UI
@@ -226,6 +201,3 @@ Jason Liu
 
 ---
 
-**快速开始**：查看 [DEPLOY_NOW.md](DEPLOY_NOW.md)  
-**遇到问题**：查看 [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md)  
-**导入音乐**：查看 [HOW_TO_USE.md](HOW_TO_USE.md)
