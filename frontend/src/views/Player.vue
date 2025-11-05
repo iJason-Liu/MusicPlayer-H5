@@ -10,8 +10,8 @@
 					<div class="name">{{ currentMusic?.name || "暂无播放" }}</div>
 					<div class="artist">{{ currentMusic?.artist || "" }}</div>
 				</div>
-				<!-- 显示当前播放歌曲的操作 详情 -->
-				<i class="fas fa-ellipsis-v" @click="goToDetail"></i>
+				<!-- 显示当前播放歌曲的操作菜单 -->
+				<i class="fas fa-ellipsis-v" @click="showMenu"></i>
 			</div>
 
 			<!-- 封面 -->
@@ -56,6 +56,12 @@
 				<i class="fas control-icon" :class="isFavorite ? 'fa-heart' : 'fa-heart'" :style="{ color: isFavorite ? '#ff4757' : '#fff' }" @click="handleFavorite"></i>
 			</div>
 		</div>
+
+		<!-- 操作菜单 -->
+		<MusicActionSheet 
+			v-model:show="showActionSheet" 
+			:music="currentMusic"
+		/>
 	</div>
 </template>
 
@@ -71,6 +77,7 @@ export default {
 	import { useMusicStore } from "@/stores/music";
 	import { showToast } from "vant";
 	import { getCoverUrl } from "@/utils/image";
+	import MusicActionSheet from "@/components/MusicActionSheet.vue";
 
 	const router = useRouter();
 	const musicStore = useMusicStore();
@@ -85,6 +92,12 @@ export default {
 	const parsedLyrics = ref([]);
 	const isDragging = ref(false); // 是否正在拖动
 	const dragValue = ref(0); // 拖动时的临时值
+	
+	// 使用 store 中的 showActionSheet 状态
+	const showActionSheet = computed({
+		get: () => musicStore.showActionSheet,
+		set: (val) => musicStore.showActionSheet = val
+	});
 
 	// 监听播放时间变化，只在非拖动状态下更新进度条
 	watch(currentTime, (val) => {
@@ -184,13 +197,14 @@ export default {
 			.filter((item) => item.text);
 	};
 
-	// 跳转到歌曲详情页
-	const goToDetail = () => {
+	// 显示操作菜单
+	const showMenu = () => {
 		if (!currentMusic.value) {
 			showToast('当前没有播放歌曲');
 			return;
 		}
-		router.push(`/music/${currentMusic.value.id}`);
+		
+		showActionSheet.value = true;
 	};
 </script>
 
@@ -201,7 +215,7 @@ export default {
 		left: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 1000;
+		z-index: 98;
 
 		.background {
 			position: absolute;

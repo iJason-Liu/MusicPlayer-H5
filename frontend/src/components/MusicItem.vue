@@ -16,13 +16,20 @@
       <i class="fas fa-ellipsis-v action-icon" @click.stop="showMenu"></i>
     </div>
   </div>
+
+  <!-- 操作菜单 -->
+  <MusicActionSheet 
+    v-model:show="showActionSheet" 
+    :music="music"
+  />
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useMusicStore } from '@/stores/music'
 import { showToast } from 'vant'
 import { getCoverUrl } from '@/utils/image'
+import MusicActionSheet from './MusicActionSheet.vue'
 
 const props = defineProps({
   music: {
@@ -37,6 +44,7 @@ const props = defineProps({
 })
 
 const musicStore = useMusicStore()
+const showActionSheet = ref(false)
 
 const isFavorite = computed(() => musicStore.isFavorite(props.music.id))
 
@@ -59,9 +67,7 @@ const handleFavorite = () => {
 }
 
 const showMenu = () => {
-  // 可以扩展更多操作
-  musicStore.addToPlaylist(props.music)
-  showToast('已添加到播放列表')
+  showActionSheet.value = true
 }
 </script>
 

@@ -14,7 +14,7 @@ class User extends TimeModel
     protected $updateTime = 'update_time';
     
     // 追加属性
-    protected $append = ['status_text'];
+    protected $append = ['status_text', 'play_count', 'favorite_count', 'playlist_count'];
     
     // 隐藏字段
     protected $hidden = ['password'];
@@ -48,5 +48,30 @@ class User extends TimeModel
         }
         
         return request()->domain() . $value;
+    }
+    
+    // 播放次数（去重后的音乐数量）
+    public function getPlayCountAttr($value, $data)
+    {
+        return \think\facade\Db::name('play_history')
+            ->where('user_id', $data['id'])
+            ->group('music_id')
+            ->count();
+    }
+    
+    // 收藏数量
+    public function getFavoriteCountAttr($value, $data)
+    {
+        return \think\facade\Db::name('favorite')
+            ->where('user_id', $data['id'])
+            ->count();
+    }
+    
+    // 播放列表数量
+    public function getPlaylistCountAttr($value, $data)
+    {
+        return \think\facade\Db::name('playlist')
+            ->where('user_id', $data['id'])
+            ->count();
     }
 }

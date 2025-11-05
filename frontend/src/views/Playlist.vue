@@ -466,8 +466,8 @@ onActivated(() => {
     position: fixed;
     right: 20px;
     bottom: 180px;
-    width: 50px;
-    height: 50px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(20px);

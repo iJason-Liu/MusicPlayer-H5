@@ -220,6 +220,14 @@ class Playlist extends Api
         // 更新列表音乐数量
         Db::name('playlist')->where('id', $playlistId)->inc('music_count')->update();
         
+        // 如果歌单没有封面，自动使用第一首歌曲的封面
+        if (empty($playlist['cover'])) {
+            Db::name('playlist')->where('id', $playlistId)->update([
+                'cover' => $music['cover'],
+                'update_time' => time()
+            ]);
+        }
+        
         return json(['code' => 1, 'msg' => '添加成功']);
     }
     

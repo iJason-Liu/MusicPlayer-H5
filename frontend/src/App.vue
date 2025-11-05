@@ -13,8 +13,8 @@
 		<!-- 迷你播放器 - 只在主页显示 -->
 		<MiniPlayer v-if="currentMusic && (showTabbar && route.path !== '/player')" />
 
-		<!-- 底部导航栏 - 只在主页面显示 -->
-		<CustomTabbar v-if="showTabbar" />
+		<!-- 底部导航栏 - 只在主页面显示，且 ActionSheet 未显示时显示 -->
+		<CustomTabbar v-if="showTabbar && !musicStore.showActionSheet" />
 	</div>
 </template>
 

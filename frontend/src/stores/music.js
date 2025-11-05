@@ -24,6 +24,7 @@ export const useMusicStore = defineStore('music', () => {
   const playHistory = ref([])
   const favorites = ref([])
   const playMode = ref('loop') // loop, random, single
+  const showActionSheet = ref(false) // 控制 ActionSheet 显示状态
   
   // 音频对象
   const audio = ref(null)
@@ -181,65 +182,88 @@ export const useMusicStore = defineStore('music', () => {
   
   // 开始播放时长追踪
   const startPlayDurationTracking = () => {
+    // 记录本次播放开始的时间点
     playStartTime.value = Date.now()
     lastUpdateTime.value = Date.now()
     
-    // 每30秒更新一次播放时长到服务器
+    // 每5秒更新一次累计时长（不上报到服务器）
     if (updateTimer.value) {
       clearInterval(updateTimer.value)
     }
     updateTimer.value = setInterval(() => {
-      updatePlayDuration()
-    }, 30000) // 30秒
+      // 只累计时长，不上报
+      const now = Date.now()
+      const duration = Math.floor((now - lastUpdateTime.value) / 1000)
+      if (duration > 0) {
+        accumulatedDuration.value += duration
+        lastUpdateTime.value = now
+      }
+    }, 5000) // 每5秒累计一次
   }
   
   // 暂停播放时长追踪
   const pausePlayDurationTracking = () => {
+    // 停止定时器
     if (updateTimer.value) {
       clearInterval(updateTimer.value)
       updateTimer.value = null
     }
-    // 暂停时立即更新一次
-    updatePlayDuration()
-  }
-  
-  // 更新播放时长
-  const updatePlayDuration = async () => {
-    if (!currentMusic.value || !playStartTime.value) return
     
-    const now = Date.now()
-    const duration = Math.floor((now - lastUpdateTime.value) / 1000)
-    
-    if (duration > 0) {
-      accumulatedDuration.value += duration
-      lastUpdateTime.value = now
-      
-      // 只有累计时长超过5秒才上报（避免频繁请求）
-      if (accumulatedDuration.value >= 5) {
-        try {
-          await addPlayHistory(currentMusic.value.id, accumulatedDuration.value)
-          accumulatedDuration.value = 0 // 重置累计时长
-        } catch (error) {
-          console.error('更新播放时长失败:', error)
-        }
+    // 计算本次播放的时长
+    if (playStartTime.value > 0) {
+      const now = Date.now()
+      const duration = Math.floor((now - lastUpdateTime.value) / 1000)
+      if (duration > 0) {
+        accumulatedDuration.value += duration
       }
     }
+    
+    // 暂停时立即上报累计的播放时长
+    if (accumulatedDuration.value > 0 && currentMusic.value) {
+      savePlayDuration()
+    }
+    
+    // 重置追踪状态
+    playStartTime.value = 0
+    lastUpdateTime.value = 0
   }
   
-  // 重置播放时长追踪
+  // 保存播放时长到服务器
+  const savePlayDuration = async () => {
+    if (!currentMusic.value || accumulatedDuration.value <= 0) return
+    
+    try {
+      await addPlayHistory(currentMusic.value.id, accumulatedDuration.value)
+      console.log(`已保存播放时长: ${accumulatedDuration.value}秒`)
+      accumulatedDuration.value = 0 // 重置累计时长
+    } catch (error) {
+      console.error('保存播放时长失败:', error)
+    }
+  }
+  
+  // 重置播放时长追踪（切歌时调用）
   const resetPlayDurationTracking = () => {
+    // 停止定时器
     if (updateTimer.value) {
       clearInterval(updateTimer.value)
       updateTimer.value = null
     }
     
-    // 切歌前先更新当前歌曲的播放时长
-    if (accumulatedDuration.value > 0 && currentMusic.value) {
-      addPlayHistory(currentMusic.value.id, accumulatedDuration.value).catch(err => {
-        console.error('保存播放时长失败:', err)
-      })
+    // 计算剩余的播放时长
+    if (playStartTime.value > 0 && lastUpdateTime.value > 0) {
+      const now = Date.now()
+      const duration = Math.floor((now - lastUpdateTime.value) / 1000)
+      if (duration > 0) {
+        accumulatedDuration.value += duration
+      }
     }
     
+    // 切歌前先保存当前歌曲的播放时长
+    if (accumulatedDuration.value > 0 && currentMusic.value) {
+      savePlayDuration()
+    }
+    
+    // 重置所有追踪状态
     playStartTime.value = 0
     accumulatedDuration.value = 0
     lastUpdateTime.value = 0
@@ -578,6 +602,15 @@ export const useMusicStore = defineStore('music', () => {
       
       // 监听页面关闭/刷新，保存播放时长
       window.addEventListener('beforeunload', () => {
+        // 计算剩余的播放时长
+        if (playStartTime.value > 0 && lastUpdateTime.value > 0 && isPlaying.value) {
+          const now = Date.now()
+          const duration = Math.floor((now - lastUpdateTime.value) / 1000)
+          if (duration > 0) {
+            accumulatedDuration.value += duration
+          }
+        }
+        
         if (accumulatedDuration.value > 0 && currentMusic.value) {
           // 使用 sendBeacon 确保数据能发送出去
           const token = localStorage.getItem('token')
@@ -592,10 +625,10 @@ export const useMusicStore = defineStore('music', () => {
       
       // 监听页面可见性变化（切换标签页）
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          // 页面隐藏时暂停追踪
+        if (document.hidden && isPlaying.value) {
+          // 页面隐藏时，如果正在播放则暂停追踪并保存
           pausePlayDurationTracking()
-        } else if (isPlaying.value) {
+        } else if (!document.hidden && isPlaying.value) {
           // 页面显示且正在播放时恢复追踪
           startPlayDurationTracking()
         }
@@ -629,6 +662,7 @@ export const useMusicStore = defineStore('music', () => {
     playHistory,
     favorites,
     playMode,
+    showActionSheet,
     hasNext,
     hasPrev,
     

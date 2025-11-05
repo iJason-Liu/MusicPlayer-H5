@@ -35,18 +35,29 @@
           <i class="fas fa-chevron-right"></i>
         </div>
       </div>
-      
-      <div class="menu-item" @click="$router.push('/mine/playlist')">
+
+      <div class="menu-item" @click="$router.push('/mine/playlists')">
         <div class="left">
           <i class="fas fa-list-ul icon"></i>
-          <span>播放列表</span>
+          <span>我的歌单</span>
         </div>
         <div class="right">
           <span class="count">{{ userStore.statistics?.playlist_count || 0 }}</span>
           <i class="fas fa-chevron-right"></i>
         </div>
       </div>
-      
+
+      <div class="menu-item" @click="$router.push('/mine/playlist')">
+        <div class="left">
+          <i class="fas fa-play-circle icon"></i>
+          <span>当前播放</span>
+        </div>
+        <div class="right">
+          <span class="count">{{ userStore.statistics?.queue_count || currentPlaylistCount }}</span>
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </div>
+
       <div class="menu-item" @click="$router.push('/mine/star')">
         <div class="left">
           <i class="fas fa-heart icon"></i>
@@ -78,17 +89,21 @@ export default {
 </script>
 
 <script setup>
-import { onActivated, onMounted } from 'vue'
+import { onActivated, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useMusicStore } from '@/stores/music'
 import { showConfirmDialog, showToast } from 'vant'
 import { getAvatarUrl } from '@/utils/image'
 const router = useRouter()
 const userStore = useUserStore()
+const musicStore = useMusicStore()
+
+// 当前播放队列数量
+const currentPlaylistCount = computed(() => musicStore.playlist?.length || 0)
 const formatDuration = (seconds) => {
-  const hours = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  return hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`
+  const hours = (seconds / 3600).toFixed(1)
+  return `${hours}小时`
 }
 
 const handleLogout = () => {

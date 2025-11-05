@@ -63,7 +63,7 @@
 		justify-content: space-around;
 		padding: 0 8px;
 		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-		z-index: 1000;
+		z-index: 99;
 		position: relative;
 
 		// 滑动背景指示器

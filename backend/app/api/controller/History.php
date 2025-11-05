@@ -30,8 +30,16 @@ class History extends Api
                 ->group('music_id')
                 ->buildSql();
             
+            // 先统计总数（基于实际能查询到的数据）
+            $total = Db::table($subQuery . ' h')
+                ->join('music m', 'h.music_id = m.id')
+                ->where('m.status', 1)  // 只统计状态正常的音乐
+                ->count();
+            
+            // 查询分页数据
             $list = Db::table($subQuery . ' h')
                 ->join('music m', 'h.music_id = m.id')
+                ->where('m.status', 1)  // 只查询状态正常的音乐
                 ->field('m.*, h.last_play_time, h.play_count, h.total_duration')
                 ->order('h.last_play_time', 'desc')
                 ->page($page, $limit)
@@ -45,12 +53,6 @@ class History extends Api
                 $item['total_duration'] = (int)$item['total_duration'];
                 $item['total_duration_text'] = $this->formatDuration($item['total_duration']);
             }
-            
-            // 统计总数（去重后的音乐数量）
-            $total = Db::name('play_history')
-                ->where('user_id', $userId)
-                ->distinct(true)
-                ->count('music_id');
             
             return json([
                 'code' => 1, 

@@ -119,7 +119,7 @@ export const getHotMusic = (limit = 20) => {
 
 // 获取播放历史
 export const getPlayHistory = (params = {}) => {
-  return request.get('/history/list', { params })
+  return request.get('/history/list', { params, stream: 0 })
 }
 
 // 添加播放记录
@@ -141,7 +141,7 @@ export const clearPlayHistory = () => {
 
 // 获取收藏列表
 export const getFavoriteList = (params = {}) => {
-  return request.get('/favorite/list', { params })
+  return request.get('/favorite/list', { params, stream: 0 })
 }
 
 // 添加收藏
@@ -162,8 +162,8 @@ export const checkFavorite = (musicId) => {
 // ==================== 播放列表相关 ====================
 
 // 获取播放列表
-export const getPlaylistList = () => {
-  return request.get('/playlist/list')
+export const getPlaylistList = (params = {}) => {
+  return request.get('/playlist/list', { params })
 }
 
 // 创建播放列表

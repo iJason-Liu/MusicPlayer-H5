@@ -16,16 +16,24 @@
           @click.stop="togglePlay"
         ></i>
         <i class="fas fa-step-forward control-icon" @click.stop="playNext"></i>
+        <i class="fas fa-ellipsis-v control-icon" @click.stop="showActionSheet = true"></i>
       </div>
     </div>
   </div>
+
+  <!-- 操作菜单 -->
+  <MusicActionSheet 
+    v-model:show="showActionSheet" 
+    :music="currentMusic"
+  />
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMusicStore } from '@/stores/music'
 import { getCoverUrl } from '@/utils/image'
+import MusicActionSheet from './MusicActionSheet.vue'
 
 const router = useRouter()
 const musicStore = useMusicStore()
@@ -33,6 +41,7 @@ const musicStore = useMusicStore()
 const currentMusic = computed(() => musicStore.currentMusic)
 const isPlaying = computed(() => musicStore.isPlaying)
 const progress = computed(() => musicStore.progress)
+const showActionSheet = ref(false)
 
 const togglePlay = () => {
   musicStore.togglePlay()

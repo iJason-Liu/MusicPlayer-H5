@@ -13,12 +13,12 @@
                     <thead>
                         <tr>
                             <th width="50">ID</th>
-                            <th width="90">文件名</th>
+                            <th width="130">文件名</th>
                             <th width="150">歌曲名</th>
                             <th width="110">艺术家</th>
-                            <th width="80">大小</th>
-                            <th width="100">状态</th>
-                            <th width="120">操作</th>
+                            <th width="100">大小</th>
+                            <th width="120">状态</th>
+                            <th width="150">操作</th>
                         </tr>
                     </thead>
                     <tbody id="uploadList"></tbody>
@@ -65,10 +65,10 @@ layui.use(['upload', 'layer'], function(){
                 $('#matchAll').show();
                 
                 tr.append('<td>' + res.data.id + '</td>');
-                tr.append('<td>' + upload.name + '</td>');
+                tr.append('<td>' + res.data.file_path + '</td>');
                 tr.append('<td>' + (res.data.name || '-') + '</td>');
                 tr.append('<td>' + (res.data.artist || '-') + '</td>');
-                tr.append('<td>' + (upload.size / 1024 / 1024).toFixed(2) + ' MB</td>');
+                tr.append('<td>' + (res.data.size / 1024 / 1024).toFixed(2) + ' MB</td>');
                 tr.append('<td><span class="layui-badge layui-bg-green">上传成功</span></td>');
                 tr.append('<td>' +
                     '<button class="layui-btn layui-btn-xs" onclick="editMusic(' + res.data.id + ')">编辑</button> ' +
@@ -78,10 +78,10 @@ layui.use(['upload', 'layer'], function(){
                 layer.msg('上传成功', {icon: 1, time: 1000});
             } else {
                 tr.append('<td>-</td>');
-                tr.append('<td>' + upload.name + '</td>');
+                tr.append('<td>' + res.data.file_path + '</td>');
                 tr.append('<td>-</td>');
                 tr.append('<td>-</td>');
-                tr.append('<td>' + (upload.size / 1024 / 1024).toFixed(2) + ' MB</td>');
+                tr.append('<td>' + (res.data.size / 1024 / 1024).toFixed(2) + ' MB</td>');
                 tr.append('<td><span class="layui-badge layui-bg-red">上传失败</span></td>');
                 tr.append('<td>' + (res.msg || '未知错误') + '</td>');
                 
@@ -95,10 +95,10 @@ layui.use(['upload', 'layer'], function(){
             
             var tr = $('<tr></tr>');
             tr.append('<td>-</td>');
-            tr.append('<td>' + upload.name + '</td>');
+            tr.append('<td>' + res.data.file_path + '</td>');
             tr.append('<td>-</td>');
             tr.append('<td>-</td>');
-            tr.append('<td>' + (upload.size / 1024 / 1024).toFixed(2) + ' MB</td>');
+            tr.append('<td>' + (res.data.size / 1024 / 1024).toFixed(2) + ' MB</td>');
             tr.append('<td><span class="layui-badge layui-bg-red">上传失败</span></td>');
             tr.append('<td>网络错误</td>');
             

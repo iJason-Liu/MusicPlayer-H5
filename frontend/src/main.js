@@ -4,7 +4,7 @@ import { createPinia } from 'pinia'
 import router from './router'
 
 // Vant 组件
-import { Button, Icon, Slider, Popup, List, Search, Tab, Tabs, Tabbar, TabbarItem } from 'vant'
+import { Button, Icon, Slider, Popup, List, Search, Tab, Tabs, Tabbar, TabbarItem, Dialog, Field, ActionSheet } from 'vant'
 import 'vant/lib/index.css'
 
 // Font Awesome
@@ -38,6 +38,9 @@ app.use(Tab)
 app.use(Tabs)
 app.use(Tabbar)
 app.use(TabbarItem)
+app.use(Dialog)
+app.use(Field)
+app.use(ActionSheet)
 
 app.provide('imgPath', imgPath)
 

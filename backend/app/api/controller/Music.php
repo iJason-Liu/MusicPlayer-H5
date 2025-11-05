@@ -39,7 +39,6 @@ class Music extends Api
         return 'https://diary.crayon.vip/Music/' . $encodedPath;
     }
     
-
     /**
      * 获取音乐列表
      */

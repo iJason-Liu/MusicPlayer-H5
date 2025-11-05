@@ -43,6 +43,18 @@ const routes = [
     meta: { title: '播放列表', requiresAuth: true }
   },
   {
+    path: '/mine/playlists',
+    name: 'MyPlaylists',
+    component: () => import('@/views/MyPlaylists.vue'),
+    meta: { title: '我的歌单', requiresAuth: true }
+  },
+  {
+    path: '/playlist/:id',
+    name: 'PlaylistDetail',
+    component: () => import('@/views/PlaylistDetail.vue'),
+    meta: { title: '歌单详情', requiresAuth: true }
+  },
+  {
     path: '/mine/star',
     name: 'Star',
     component: () => import('@/views/Star.vue'),

@@ -110,14 +110,20 @@ class User extends Api
             // 总时长（秒）
             $totalDuration = Db::name('music')->where('status', 1)->sum('duration');
             
-            // 播放历史数量
-            $playCount = Db::name('play_history')->where('user_id', $userId)->count();
+            // 播放历史数量（统计去重后的音乐数量，即播放过多少首不同的歌）
+            $playCount = Db::name('play_history')
+                ->where('user_id', $userId)
+                ->group('music_id')
+                ->count();
             
             // 收藏数量
             $favoriteCount = Db::name('favorite')->where('user_id', $userId)->count();
             
-            // 播放队列数量（从用户配置表获取）
-            $playlistCount = 0;
+            // 用户创建的歌单数量
+            $playlistCount = Db::name('playlist')->where('user_id', $userId)->count();
+            
+            // 当前播放队列数量（从用户配置表获取）
+            $queueCount = 0;
             $queue = Db::name('user_config')
                 ->where('user_id', $userId)
                 ->where('config_key', 'play_queue')
@@ -126,7 +132,7 @@ class User extends Api
             if ($queue) {
                 $musicIds = json_decode($queue, true);
                 if (is_array($musicIds)) {
-                    $playlistCount = count($musicIds);
+                    $queueCount = count($musicIds);
                 }
             }
             
@@ -139,6 +145,7 @@ class User extends Api
                 'play_count' => (int)$playCount,
                 'favorite_count' => (int)$favoriteCount,
                 'playlist_count' => (int)$playlistCount,
+                'queue_count' => (int)$queueCount,
                 'total_play_duration' => (int)($totalPlayDuration ?: 0)
             ];
             
@@ -153,6 +160,7 @@ class User extends Api
                     'play_count' => 0,
                     'favorite_count' => 0,
                     'playlist_count' => 0,
+                    'queue_count' => 0,
                     'total_play_duration' => 0
                 ]
             ]);

@@ -107,21 +107,60 @@ class Music extends AdminController
             try {
                 // 验证文件
                 validate(['file' => [
-                    'fileSize' => 50 * 1024 * 1024, // 50MB
+                    'fileSize' => 200 * 1024 * 1024, // 200MB
                     'fileExt' => 'mp3,flac,wav,m4a',
                 ]])->check(['file' => $file]);
                 
-                // 保存文件
-                $savename = Filesystem::disk('public')->putFile('music', $file);
+                // 音乐文件保存目录
+                $musicPath = '/www/wwwroot/Music';
                 
-                if (!$savename) {
-                    return json(['code' => 0, 'msg' => '上传失败']);
+                // 确保目录存在
+                if (!is_dir($musicPath)) {
+                    if (!mkdir($musicPath, 0755, true)) {
+                        return json(['code' => 0, 'msg' => '无法创建目录：' . $musicPath]);
+                    }
                 }
                 
-                // 获取文件信息
+                // 检查目录是否可写
+                if (!is_writable($musicPath)) {
+                    return json(['code' => 0, 'msg' => '目录不可写：' . $musicPath]);
+                }
+                
+                // 获取原始文件名和扩展名
                 $originalName = $file->getOriginalName();
-                $name = pathinfo($originalName, PATHINFO_FILENAME);
-                $filesize = $file->getSize();
+                $extension = $file->extension();
+                $basename = pathinfo($originalName, PATHINFO_FILENAME);
+                
+                // 处理文件名重复：如果文件已存在，添加数字后缀
+                $finalName = $originalName;
+                $counter = 1;
+                while (file_exists($musicPath . '/' . $finalName)) {
+                    $finalName = $basename . '_' . $counter . '.' . $extension;
+                    $counter++;
+                }
+                
+                // 目标文件完整路径
+                $targetPath = $musicPath . '/' . $finalName;
+                
+                // 获取上传文件的临时路径
+                $tmpPath = $file->getRealPath();
+                
+                // ✅ 使用 file_get_contents + file_put_contents，而不是 copy()
+                $fileContent = file_get_contents($tmpPath);
+                if ($fileContent === false) {
+                    return json(['code' => 0, 'msg' => '无法读取上传文件']);
+                }
+                
+                if (file_put_contents($targetPath, $fileContent) === false) {
+                    return json(['code' => 0, 'msg' => '文件保存失败，无法写入到：' . $targetPath]);
+                }
+                
+                // 设置文件权限
+                @chmod($targetPath, 0755);
+                
+                // 获取文件信息
+                $name = pathinfo($finalName, PATHINFO_FILENAME);
+                $filesize = filesize($targetPath);
                 
                 // 尝试从文件名解析歌手和歌曲名（格式：歌手 - 歌曲名）
                 $artist = '';
@@ -129,13 +168,13 @@ class Music extends AdminController
                     list($artist, $name) = explode(' - ', $name, 2);
                 }
                 
-                // 保存到数据库
+                // 保存到数据库（file_path 只存储文件名）
                 $music = self::$model::create([
                     'name' => $name,
                     'artist' => $artist,
-                    'file_path' => $savename,
+                    'file_path' => $finalName,
                     'size' => $filesize,
-                    'format' => $file->extension(),
+                    'format' => $extension,
                     'status' => 1,
                 ]);
                 
@@ -146,6 +185,10 @@ class Music extends AdminController
                         'id' => $music->id,
                         'name' => $name,
                         'artist' => $artist,
+                        'size' => $filesize,
+                        'format' => $extension,
+                        'status' => 1,
+                        'file_path' => $finalName,
                     ]
                 ]);
             } catch (\Exception $e) {
