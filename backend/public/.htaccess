@@ -2,6 +2,20 @@
   Options +FollowSymlinks -Multiviews
   RewriteEngine On
 
+  # CORS 跨域配置
+  <IfModule mod_headers.c>
+    # 允许所有来源访问
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+    Header always set Access-Control-Allow-Credentials "true"
+    Header always set Access-Control-Max-Age "86400"
+    
+    # 处理 OPTIONS 预检请求
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+  </IfModule>
+
   # API路由重写 - 将 /api/* 重写到 api.php
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-f

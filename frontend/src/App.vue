@@ -63,18 +63,23 @@
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 		position: relative;
 		overflow: hidden;
+		/* 顶部安全区域适配 */
+		padding-top: env(safe-area-inset-top);
+		padding-top: constant(safe-area-inset-top); /* iOS 11.0 */
 	}
 
 	// 页面内容区域
 	.page-content {
 		width: 100%;
-		height: 100vh;
+		height: calc(100vh - env(safe-area-inset-top));
+		height: calc(100vh - constant(safe-area-inset-top)); /* iOS 11.0 */
 		overflow: hidden;
 		position: relative;
 
 		// 当显示 tabbar 时，调整高度
 		&.has-tabbar {
-			height: calc(100vh - 80px);
+			height: calc(100vh - 80px - env(safe-area-inset-top));
+			height: calc(100vh - 80px - constant(safe-area-inset-top)); /* iOS 11.0 */
 		}
 	}
 

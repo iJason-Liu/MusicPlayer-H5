@@ -21,6 +21,15 @@ export default defineConfig(({ mode }) => ({
 				drop_debugger: false,
 			},
 		},
+		// 处理动态导入警告
+		rollupOptions: {
+			external: [],
+			output: {
+				manualChunks: undefined,
+			}
+		},
+		// 忽略某些警告
+		chunkSizeWarningLimit: 1000,
 	},
 	server: {
     // host: '0.0.0.0', // ✅ 允许通过局域网 IP 访问
@@ -35,4 +44,8 @@ export default defineConfig(({ mode }) => ({
 			},
 		},
 	},
+	// 优化依赖预构建
+	optimizeDeps: {
+		exclude: ['@capacitor/core', '@capacitor/app', '@capacitor/status-bar', '@capacitor/splash-screen']
+	}
 }));

@@ -112,11 +112,12 @@ export default {
 </script>
 
 <script setup>
-	import { ref, computed, watch, nextTick } from "vue";
+	import { ref, onMounted, computed, watch, nextTick } from "vue";
 	import { useMusicStore } from "@/stores/music";
 	import { showToast } from "vant";
 	import { getCoverUrl } from "@/utils/image";
 	import MusicActionSheet from "@/components/MusicActionSheet.vue";
+	import { setupBackgroundAudio, setupMediaSession } from '@/utils/capacitor-audio';
 
 	const musicStore = useMusicStore();
 	const currentMusic = computed(() => musicStore.currentMusic);
@@ -142,6 +143,11 @@ export default {
 	const showActionSheet = computed({
 		get: () => musicStore.showActionSheet,
 		set: (val) => musicStore.showActionSheet = val
+	});
+
+	// 在组件挂载时
+	onMounted(() => {
+		setupBackgroundAudio();
 	});
 
 	/**
@@ -270,6 +276,13 @@ export default {
 		{ immediate: true }
 	);
 
+	// 在播放音乐时
+	watch(currentMusic, (music) => {
+		if (music) {
+			setupMediaSession(music);
+		}
+	});
+
 	// 检查文字溢出
 	const checkTextOverflow = () => {
 		if (nameRef.value) {
@@ -395,11 +408,13 @@ export default {
 				top: 0;
 				left: 0;
 				right: 0;
+				z-index: 10;
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
 				padding: 20px;
-				z-index: 10;
+				padding-top: calc(20px + env(safe-area-inset-top));
+				padding-top: calc(20px + constant(safe-area-inset-top)); /* iOS 11.0 */
 
 				i {
 					font-size: 20px;
@@ -445,27 +460,28 @@ export default {
 			.content-box {
 				.cover-area {
 					position: fixed;
-					top: 100px;
+					top: calc(100px + env(safe-area-inset-top));
+					top: calc(100px + constant(safe-area-inset-top)); /* iOS 11.0 */
 					left: 0;
 					right: 0;
-					height: 420px;
+					height: 57vh;
 					display: flex;
 					flex-direction: column;
 					align-items: center;
-					justify-content: flex-start;
+					justify-content: center;
 					z-index: 1;
 					cursor: pointer;
 					
 					.cover-wrapper {
-						width: 280px;
-						height: 280px;
+						width: 290px;
+						height: 290px;
 						border-radius: 50%;
 						padding: 20px;
 						overflow: hidden;
 						background: rgba(255, 255, 255, 0.1);
 						backdrop-filter: blur(20px);
 						box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-						margin-bottom: 20px;
+						margin-bottom: 30px;
 
 						.cover {
 							width: 100%;
@@ -486,7 +502,6 @@ export default {
 					
 					.lyric-preview {
 						width: 100%;
-						height: 120px;
 						padding: 0 40px;
 						display: flex;
 						flex-direction: column;
@@ -494,7 +509,7 @@ export default {
 						justify-content: center;
 						
 						.lyric-line {
-							font-size: 13px;
+							font-size: 14px;
 							line-height: 2;
 							opacity: 0.5;
 							transition: all 0.3s ease;
@@ -504,7 +519,7 @@ export default {
 							
 							&.active {
 								opacity: 1;
-								font-size: 16px;
+								font-size: 18px;
 								font-weight: 600;
 								color: #fff;
 								text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -515,10 +530,11 @@ export default {
 
 				.lyric-full {
 					position: fixed;
-					top: 100px;
+					top: calc(100px + env(safe-area-inset-top));
+					top: calc(100px + constant(safe-area-inset-top)); /* iOS 11.0 */
 					left: 0;
 					right: 0;
-					height: 420px;
+					height: 57vh;
 					overflow: hidden;
 					text-align: center;
 					z-index: 2;
@@ -537,15 +553,15 @@ export default {
 					}
 
 					.lyric-line {
-						font-size: 15px;
-						line-height: 2.4;
+						font-size: 16px;
+						line-height: 2.8;
 						opacity: 0.5;
 						transition: all 0.3s ease;
 						padding: 6px 0;
 						
 						&.active {
 							opacity: 1;
-							font-size: 18px;
+							font-size: 20px;
 							font-weight: 600;
 							color: #fff;
 							text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);

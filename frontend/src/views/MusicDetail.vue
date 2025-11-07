@@ -173,7 +173,7 @@ export default {
 		left: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 1000;
+		z-index: 98;
 
 		.background {
 			position: absolute;
@@ -193,7 +193,7 @@ export default {
 			height: 100%;
 			display: flex;
 			flex-direction: column;
-			padding: 20px;
+			padding: 0 20px;
 			color: #fff;
 			overflow-y: auto;
 
@@ -201,6 +201,8 @@ export default {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
+				padding-top: calc(20px + env(safe-area-inset-top));
+				padding-top: calc(20px + constant(safe-area-inset-top)); /* iOS 11.0 */
 				margin-bottom: 30px;
 
 				i {

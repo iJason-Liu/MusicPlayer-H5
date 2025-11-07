@@ -3,13 +3,25 @@ import { showToast } from 'vant'
 import router from '@/router'
 
 // 根据环境设置 API 基础路径
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+const isDev = import.meta.env.MODE === 'development'
+const baseURL = import.meta.env.VITE_API_BASE_URL || ''
 
-console.log('API Base URL:', baseURL)
+// 开发环境：使用 vite proxy，路径为 /api
+// 生产环境：使用完整域名 + /api
+const apiBaseURL = isDev ? '/api' : (baseURL ? `${baseURL}/api` : '/api')
+
+console.log('=== API 配置 ===')
+console.log('环境:', import.meta.env.MODE)
+console.log('是否开发环境:', isDev)
+console.log('Base URL:', baseURL)
+console.log('最终 API 路径:', apiBaseURL)
 
 const request = axios.create({
-  baseURL,
-  timeout: 10000
+  baseURL: apiBaseURL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
 // 请求拦截器 - 添加 token
@@ -17,7 +29,7 @@ request.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token')
     if (token) {
-      config.headers['Authorization'] = token
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config
   },
