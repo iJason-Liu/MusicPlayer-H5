@@ -61,6 +61,7 @@
     <a class="layui-btn layui-btn-xs layui-btn-normal play-btn" lay-event="play" data-id="{{d.id}}" title="播放">
         <i class="fa fa-play"></i>
     </a>
+    <a class="layui-btn layui-btn-xs" lay-event="supplement">补充</a>
     <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
     <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">删除</a>
 </script>
@@ -89,7 +90,7 @@ layui.use(['table', 'form', 'layer'], function(){
             {field: 'size', title: '文件大小', width: 110, sort: true},
             {field: 'status', title: '状态', width: 100, templet: '#statusTpl'},
             {field: 'create_time', title: '创建时间', width: 170, sort: true},
-            {title: '操作', width: 200, fixed: 'right', toolbar: '#operateTpl'}
+            {title: '操作', width: 240, fixed: 'right', toolbar: '#operateTpl'}
         ]],
         page: true,
         limit: 20,
@@ -224,6 +225,9 @@ layui.use(['table', 'form', 'layer'], function(){
         if(obj.event === 'play'){
             // 播放音乐
             playMusic(data);
+        } else if(obj.event === 'supplement'){
+            // 补充信息
+            showSupplementDialog(data);
         } else if(obj.event === 'edit'){
             layer.open({
                 type: 2,
@@ -245,6 +249,156 @@ layui.use(['table', 'form', 'layer'], function(){
             });
         }
     });
+    
+    // 补充信息弹窗
+    function showSupplementDialog(music) {
+        var content = `
+            <div style="padding: 20px;">
+                <div class="layui-form">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">当前歌曲</label>
+                        <div class="layui-input-block">
+                            <input type="text" class="layui-input" value="${music.name || ''} - ${music.artist || ''}" disabled>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">搜索关键词</label>
+                        <div class="layui-input-block">
+                            <div class="layui-input-group">
+                                <input type="text" id="search-keywords" class="layui-input" placeholder="输入歌曲名或歌手名" value="${music.name || ''}">
+                                <div class="layui-input-split layui-input-suffix" style="cursor: pointer;" onclick="searchMusic()">
+                                    <i class="layui-icon layui-icon-search"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="search-results" style="margin-top: 20px; max-height: 400px; overflow-y: auto;">
+                    <div style="text-align: center; color: #999; padding: 40px 0;">
+                        请输入关键词搜索歌曲
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        var layerIndex = layer.open({
+            type: 1,
+            title: '补充歌曲信息',
+            area: ['800px', '600px'],
+            content: content,
+            success: function() {
+                // 回车搜索
+                $('#search-keywords').on('keydown', function(e) {
+                    if(e.keyCode === 13) {
+                        searchMusic();
+                    }
+                });
+                
+                // 全局搜索函数
+                window.searchMusic = function() {
+                    var keywords = $('#search-keywords').val().trim();
+                    if(!keywords) {
+                        layer.msg('请输入搜索关键词', {icon: 0});
+                        return;
+                    }
+                    
+                    $('#search-results').html('<div style="text-align: center; padding: 40px 0;"><i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i> 搜索中...</div>');
+                    
+                    $.get('{:url("searchFromApi")}', {keywords: keywords}, function(res) {
+                        if(res.code == 1 && res.data && res.data.length > 0) {
+                            renderSearchResults(res.data, music.id);
+                        } else {
+                            $('#search-results').html('<div style="text-align: center; color: #999; padding: 40px 0;">未找到相关歌曲</div>');
+                        }
+                    }).fail(function() {
+                        $('#search-results').html('<div style="text-align: center; color: #ff5722; padding: 40px 0;">搜索失败，请重试</div>');
+                    });
+                };
+                
+                // 渲染搜索结果
+                window.renderSearchResults = function(songs, musicId) {
+                    var html = '<div class="layui-card">';
+                    
+                    songs.forEach(function(song, index) {
+                        var artists = song.artists ? song.artists.map(function(a) { return a.name; }).join('/') : '';
+                        var albumName = song.album ? song.album.name : '';
+                        var coverUrl = song.album && song.album.img1v1Url ? song.album.img1v1Url : '';
+                        var duration = song.duration ? Math.floor(song.duration / 1000) : 0;
+                        var durationStr = Math.floor(duration / 60) + ':' + String(duration % 60).padStart(2, '0');
+                        var songId = song.id || 0;
+                        var coverId = 'cover-' + index;
+                        
+                        html += '<div class="layui-card-body" style="border-bottom: 1px solid #f0f0f0; padding: 15px; cursor: pointer;" onmouseover="this.style.backgroundColor=\'#f8f8f8\'" onmouseout="this.style.backgroundColor=\'#fff\'" onclick="applySupplement(' + musicId + ', ' + songId + ', \'' + song.name.replace(/'/g, "\\'") + '\')">';
+                        html += '<div style="display: flex; align-items: center;">';
+                        
+                        // 封面容器
+                        html += '<div id="' + coverId + '" style="width: 60px; height: 60px; border-radius: 4px; margin-right: 15px; overflow: hidden; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">';
+                        if(coverUrl) {
+                            // 添加 referrerpolicy 和错误处理
+                            html += '<img src="' + coverUrl + '" referrerpolicy="no-referrer" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display=\'none\'; this.parentElement.innerHTML=\'<i class=\\\'layui-icon layui-icon-music\\\' style=\\\'font-size: 24px; color: #ccc;\\\'></i>\';">';
+                        } else {
+                            html += '<i class="layui-icon layui-icon-music" style="font-size: 24px; color: #ccc;"></i>';
+                        }
+                        html += '</div>';
+                        
+                        html += '<div style="flex: 1;">';
+                        html += '<div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">' + song.name + '</div>';
+                        html += '<div style="color: #999; font-size: 13px;">';
+                        html += '<span>' + artists + '</span>';
+                        if(albumName) {
+                            html += ' · <span>' + albumName + '</span>';
+                        }
+                        html += ' · <span>' + durationStr + '</span>';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        html += '<div><button class="layui-btn layui-btn-sm layui-btn-normal">选择</button></div>';
+                        html += '</div>';
+                        html += '</div>';
+                    });
+                    
+                    html += '</div>';
+                    $('#search-results').html(html);
+                };
+                
+                // 应用补充信息
+                window.applySupplement = function(musicId, songId, songName) {
+                    layer.confirm('确定要应用《' + songName + '》的信息吗？<br><br>将会获取：<br>• 歌曲详情（封面、歌手、专辑、时长）<br>• 歌词信息', {icon: 3}, function(confirmIndex) {
+                        layer.close(confirmIndex);
+                        
+                        var loadIndex = layer.msg('正在获取歌曲详情和歌词...', {
+                            icon: 16,
+                            shade: 0.3,
+                            time: 0
+                        });
+                        
+                        $.post('{:url("applySupplement")}', {
+                            music_id: musicId,
+                            song_id: songId
+                        }, function(res) {
+                            layer.close(loadIndex);
+                            if(res.code == 1) {
+                                var msg = res.msg;
+                                if(res.data && res.data.details && res.data.details.length > 0) {
+                                    msg += '<br><br>👇🏻更新内容👇🏻<br>' + res.data.details.join('<br>');
+                                }
+                                layer.alert(msg, {icon: 1}, function(alertIndex) {
+                                    layer.close(alertIndex);
+                                    layer.close(layerIndex);
+                                    tableIns.reload();
+                                });
+                            } else {
+                                layer.msg(res.msg, {icon: 2, time: 3000});
+                            }
+                        }).fail(function() {
+                            layer.close(loadIndex);
+                            layer.msg('操作失败，请重试', {icon: 2});
+                        });
+                    });
+                };
+            }
+        });
+    }
     
     // 播放音乐功能
     var currentAudio = null;

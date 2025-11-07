@@ -3,8 +3,7 @@
     <img :src="getCoverUrl(music.cover)" class="cover" />
     <div class="info">
       <div class="name">{{ music.name }}</div>
-      <!-- {{ music.album }} -->
-      <div class="artist">{{ music.artist }}</div>
+      <div class="artist">{{ music.artist }}{{ music.album ? ' - ' + music.album : '' }}</div>
     </div>
     <div class="actions">
       <i 

@@ -121,6 +121,26 @@ class History extends Api
                 'create_time' => time()
             ]);
             
+            // 只要有播放时长（大于0秒），就增加歌单播放次数
+            // 这样切歌或暂停时也会统计
+            if ($duration > 0) {
+                // 查找包含该音乐的所有歌单（该用户创建的）
+                $playlists = Db::name('playlist_music')
+                    ->alias('pm')
+                    ->join('playlist p', 'pm.playlist_id = p.id')
+                    ->where('pm.music_id', $musicId)
+                    ->where('p.user_id', $userId)
+                    ->column('pm.playlist_id');
+                
+                // 增加这些歌单的播放次数
+                if (!empty($playlists)) {
+                    Db::name('playlist')
+                        ->whereIn('id', $playlists)
+                        ->inc('play_count')
+                        ->update();
+                }
+            }
+            
             return json(['code' => 1, 'msg' => '添加成功']);
         } catch (\Exception $e) {
             return json(['code' => 0, 'msg' => '添加失败：' . $e->getMessage()]);

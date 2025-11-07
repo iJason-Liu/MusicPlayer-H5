@@ -315,6 +315,323 @@ class Music extends AdminController
         }
     }
 
+    #[NodeAnnotation(title: '补充信息-搜索', auth: true)]
+    public function searchFromApi(Request $request): Json
+    {
+        try {
+            $keywords = $request->param('keywords', '');
+            
+            if (empty($keywords)) {
+                return json(['code' => 0, 'msg' => '请输入搜索关键词']);
+            }
+            
+            // 调用第三方接口搜索
+            $apiUrl = 'http://api.melody.crayon.vip/search?keywords=' . urlencode($keywords);
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            if ($httpCode !== 200 || $error) {
+                return json(['code' => 0, 'msg' => '搜索失败：' . ($error ?: '接口返回错误')]);
+            }
+            
+            $result = json_decode($response, true);
+            
+            if (!$result || !isset($result['result']['songs'])) {
+                return json(['code' => 0, 'msg' => '搜索结果为空']);
+            }
+            
+            return json([
+                'code' => 1,
+                'msg' => '搜索成功',
+                'data' => $result['result']['songs']
+            ]);
+            
+        } catch (\Exception $e) {
+            return json(['code' => 0, 'msg' => '搜索失败：' . $e->getMessage()]);
+        }
+    }
+    
+    #[NodeAnnotation(title: '补充信息-应用', auth: true)]
+    public function applySupplement(Request $request): Json
+    {
+        try {
+            $this->checkPostRequest();
+            
+            $musicId = $request->param('music_id', 0);
+            $songId = $request->param('song_id', 0);
+            
+            if (empty($musicId) || empty($songId)) {
+                return json(['code' => 0, 'msg' => '参数错误']);
+            }
+            
+            // 查找音乐记录
+            $music = self::$model::find($musicId);
+            if (!$music) {
+                return json(['code' => 0, 'msg' => '音乐不存在']);
+            }
+            
+            // 1. 调用歌曲详情接口
+            $detailUrl = 'http://api.melody.crayon.vip/song/detail?ids=' . $songId;
+            $detailData = $this->callApi($detailUrl);
+            
+            if (!$detailData || !isset($detailData['songs'][0])) {
+                return json(['code' => 0, 'msg' => '获取歌曲详情失败']);
+            }
+            
+            $songDetail = $detailData['songs'][0];
+            
+            // 2. 调用歌词接口
+            $lyricUrl = 'http://api.melody.crayon.vip/lyric?id=' . $songId;
+            $lyricData = $this->callApi($lyricUrl);
+            
+            $updateData = [];
+            
+            // 更新歌曲名称
+            if (!empty($songDetail['name'])) {
+                $updateData['name'] = $songDetail['name'];
+            }
+            
+            // 更新歌手信息
+            if (!empty($songDetail['ar']) && is_array($songDetail['ar'])) {
+                $artists = array_column($songDetail['ar'], 'name');
+                $updateData['artist'] = implode('/', $artists);
+            }
+            
+            // 更新专辑信息
+            if (!empty($songDetail['al']['name'])) {
+                $updateData['album'] = $songDetail['al']['name'];
+            }
+            
+            // 更新时长（毫秒转秒）
+            if (!empty($songDetail['dt'])) {
+                $updateData['duration'] = round($songDetail['dt'] / 1000);
+            }
+            
+            // 更新歌词（优先翻译歌词，其次原文歌词）
+            if ($lyricData) {
+                if (!empty($lyricData['tlyric']['lyric'])) {
+                    $updateData['lyric'] = $lyricData['tlyric']['lyric'];
+                } elseif (!empty($lyricData['lrc']['lyric'])) {
+                    $updateData['lyric'] = $lyricData['lrc']['lyric'];
+                }
+            }
+            
+            // 下载并保存封面
+            if (!empty($songDetail['al']['picUrl'])) {
+                $coverUrl = $songDetail['al']['picUrl'];
+                $coverPath = $this->downloadAndSaveCover($coverUrl, $musicId);
+                if ($coverPath) {
+                    $updateData['cover'] = $coverPath;
+                }
+            }
+            
+            // 更新数据库
+            if (!empty($updateData)) {
+                $music->save($updateData);
+                
+                // 返回详细信息
+                $details = [];
+                if (isset($updateData['name'])) $details[] = '歌曲名: ' . $updateData['name'];
+                if (isset($updateData['artist'])) $details[] = '歌手: ' . $updateData['artist'];
+                if (isset($updateData['album'])) $details[] = '专辑: ' . $updateData['album'];
+                if (isset($updateData['duration'])) $details[] = '时长: ' . gmdate('i:s', $updateData['duration']);
+                if (isset($updateData['cover'])) $details[] = '封面: 已下载';
+                if (isset($updateData['lyric'])) $details[] = '歌词: 已获取';
+                
+                return json([
+                    'code' => 1, 
+                    'msg' => '补充信息成功',
+                    'data' => [
+                        'details' => $details,
+                        'updated' => $updateData
+                    ]
+                ]);
+            } else {
+                return json(['code' => 0, 'msg' => '没有可更新的信息']);
+            }
+            
+        } catch (\Exception $e) {
+            trace('补充信息失败: ' . $e->getMessage(), 'error');
+            return json(['code' => 0, 'msg' => '补充信息失败：' . $e->getMessage()]);
+        }
+    }
+    
+    /**
+     * 调用第三方API
+     */
+    private function callApi($url): ?array
+    {
+        try {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            if ($httpCode !== 200 || $error) {
+                trace('API调用失败: ' . $url . ', 错误: ' . $error, 'error');
+                return null;
+            }
+            
+            $result = json_decode($response, true);
+            return $result ?: null;
+            
+        } catch (\Exception $e) {
+            trace('API调用异常: ' . $e->getMessage(), 'error');
+            return null;
+        }
+    }
+    
+    /**
+     * 下载并保存封面图片
+     */
+    private function downloadAndSaveCover($url, $musicId): string
+    {
+        try {
+            // 下载图片
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            
+            $imageData = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode !== 200 || !$imageData) {
+                return '';
+            }
+            
+            // 封面保存目录
+            $baseDir = '/www/wwwroot/Music/covers';
+            $yearMonth = date('Ym');
+            $coverPath = $baseDir . '/' . $yearMonth;
+            
+            // 确保目录存在
+            if (!is_dir($coverPath)) {
+                mkdir($coverPath, 0755, true);
+            }
+            
+            // 生成文件名
+            $extension = 'jpg';
+            $finalName = 'music_' . $musicId . '_' . time() . '.' . $extension;
+            $targetPath = $coverPath . '/' . $finalName;
+            
+            // 保存文件
+            if (file_put_contents($targetPath, $imageData) === false) {
+                return '';
+            }
+            
+            @chmod($targetPath, 0644);
+            
+            // 返回相对路径
+            return 'covers/' . $yearMonth . '/' . $finalName;
+            
+        } catch (\Exception $e) {
+            trace('下载封面失败: ' . $e->getMessage(), 'error');
+            return '';
+        }
+    }
+
+    #[NodeAnnotation(title: '上传封面', auth: true)]
+    public function uploadCover(Request $request): Json
+    {
+        if ($request->isPost()) {
+            $file = $request->file('file');
+            
+            if (!$file) {
+                return json(['code' => 0, 'msg' => '请选择文件']);
+            }
+            
+            try {
+                // 验证文件
+                validate(['file' => [
+                    'fileSize' => 5 * 1024 * 1024, // 5MB
+                    'fileExt' => 'jpg,jpeg,png,gif,webp',
+                ]])->check(['file' => $file]);
+                
+                // 封面保存基础目录
+                $baseDir = '/www/wwwroot/Music/covers';
+                
+                // 添加年月子目录
+                $yearMonth = date('Ym');
+                $coverPath = $baseDir . '/' . $yearMonth;
+                
+                // 确保目录存在
+                if (!is_dir($coverPath)) {
+                    if (!mkdir($coverPath, 0755, true)) {
+                        return json(['code' => 0, 'msg' => '无法创建目录：' . $coverPath]);
+                    }
+                }
+                
+                // 检查目录是否可写
+                if (!is_writable($coverPath)) {
+                    return json(['code' => 0, 'msg' => '目录不可写：' . $coverPath]);
+                }
+                
+                // 获取原始文件名和扩展名
+                $originalName = $file->getOriginalName();
+                $extension = $file->extension();
+                
+                // 生成唯一文件名：使用时间戳 + 随机数
+                $finalName = date('YmdHis') . '_' . mt_rand(1000, 9999) . '.' . $extension;
+                
+                // 目标文件完整路径
+                $targetPath = $coverPath . '/' . $finalName;
+                
+                // 相对路径（用于数据库存储和前端访问）
+                $relativePath = 'covers/' . $yearMonth . '/' . $finalName;
+                
+                // 获取上传文件的临时路径
+                $tmpPath = $file->getRealPath();
+                
+                // 使用 file_get_contents + file_put_contents
+                $fileContent = file_get_contents($tmpPath);
+                if ($fileContent === false) {
+                    return json(['code' => 0, 'msg' => '无法读取上传文件']);
+                }
+                
+                if (file_put_contents($targetPath, $fileContent) === false) {
+                    return json(['code' => 0, 'msg' => '文件保存失败']);
+                }
+                
+                // 设置文件权限
+                @chmod($targetPath, 0644);
+                
+                // 返回相对路径和完整URL
+                return json([
+                    'code' => 1, 
+                    'msg' => '上传成功',
+                    'data' => [
+                        'path' => $relativePath,
+                        'url' => domain() . '/Music/' . $relativePath,
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                return json(['code' => 0, 'msg' => '上传失败：' . $e->getMessage()]);
+            }
+        }
+        
+        return json(['code' => 0, 'msg' => '请求方式错误']);
+    }
+
     #[NodeAnnotation(title: '状态切换', auth: true)]
     public function changeStatus(Request $request): Json
     {

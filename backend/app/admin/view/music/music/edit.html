@@ -27,12 +27,15 @@
                 <button type="button" class="layui-btn layui-btn-sm" id="uploadCover">
                     <i class="layui-icon">&#xe67c;</i>上传封面
                 </button>
+                <button type="button" class="layui-btn layui-btn-sm layui-btn-danger" id="deleteCover" style="display: {$row.cover ? 'inline-block' : 'none'};">
+                    <i class="layui-icon">&#xe640;</i>删除封面
+                </button>
                 <div class="layui-upload-list" style="margin-top: 10px;">
                     <img id="coverPreview" src="{$row.cover}" style="max-width: 200px; max-height: 200px; display: {$row.cover ? 'block' : 'none'};">
                 </div>
             </div>
             <input type="hidden" name="cover" id="coverInput" value="{$row.cover}">
-            <div class="layui-form-mid layui-word-aux">支持 jpg、png、gif 格式，建议尺寸 500x500</div>
+            <div class="layui-form-mid layui-word-aux">支持 jpg、png、gif、webp 格式，建议尺寸 500x500，最大 5MB</div>
         </div>
     </div>
     
@@ -69,19 +72,21 @@ layui.use(['form', 'layer', 'upload'], function(){
     // 封面上传
     upload.render({
         elem: '#uploadCover',
-        url: '{$adminUploadUrl|default="/admin/ajax/upload"}',
+        url: '{:url("uploadCover")}',
         accept: 'images',
         acceptMime: 'image/*',
-        size: 2048, // 2MB
+        size: 5120, // 5MB
         before: function(obj){
             layer.load(1);
         },
         done: function(res){
             layer.closeAll('loading');
             if(res.code == 1){
+                var coverPath = res.data.path;
                 var coverUrl = res.data.url;
-                $('#coverInput').val(coverUrl);
+                $('#coverInput').val(coverPath);
                 $('#coverPreview').attr('src', coverUrl).show();
+                $('#deleteCover').show();
                 layer.msg('上传成功', {icon: 1});
             } else {
                 layer.msg(res.msg || '上传失败', {icon: 2});
@@ -91,6 +96,17 @@ layui.use(['form', 'layer', 'upload'], function(){
             layer.closeAll('loading');
             layer.msg('上传失败', {icon: 2});
         }
+    });
+    
+    // 删除封面
+    $('#deleteCover').on('click', function(){
+        layer.confirm('确定要删除封面吗？', {icon: 3, title: '提示'}, function(index){
+            $('#coverInput').val('');
+            $('#coverPreview').hide();
+            $('#deleteCover').hide();
+            layer.close(index);
+            layer.msg('已删除封面', {icon: 1});
+        });
     });
     
     // 监听提交

@@ -182,7 +182,7 @@ export const useMusicStore = defineStore('music', () => {
   
   // 开始播放时长追踪
   const startPlayDurationTracking = () => {
-    // 记录本次播放开始的时间点
+    // 记录本次播放开始的时间点和音频当前位置
     playStartTime.value = Date.now()
     lastUpdateTime.value = Date.now()
     
@@ -218,12 +218,12 @@ export const useMusicStore = defineStore('music', () => {
       }
     }
     
-    // 暂停时立即上报累计的播放时长
+    // 暂停时立即上报累计的播放时长（不需要完播）
     if (accumulatedDuration.value > 0 && currentMusic.value) {
       savePlayDuration()
     }
     
-    // 重置追踪状态
+    // 重置追踪状态（但不重置累计时长，因为已经保存了）
     playStartTime.value = 0
     lastUpdateTime.value = 0
   }
@@ -258,7 +258,7 @@ export const useMusicStore = defineStore('music', () => {
       }
     }
     
-    // 切歌前先保存当前歌曲的播放时长
+    // 切歌前先保存当前歌曲的播放时长（不需要完播）
     if (accumulatedDuration.value > 0 && currentMusic.value) {
       savePlayDuration()
     }
