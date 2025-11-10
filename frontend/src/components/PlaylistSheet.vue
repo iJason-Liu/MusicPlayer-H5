@@ -36,6 +36,8 @@
             <!-- 序号 -->
             <div class="index">{{ index + 1 }}</div>
 						<i v-if="index === currentIndex" class="fas fa-volume-up playing-icon"></i>
+						<!-- 封面 -->
+						<img :src="getCoverUrl(item.cover)" class="cover" />
 						<div class="text-content">
 							<div class="name">{{ item.name }}</div>
 							<div class="artist">{{ item.artist }}</div>
@@ -55,6 +57,7 @@
 	import { computed, ref, watch, nextTick } from 'vue';
 	import { useMusicStore } from '@/stores/music';
 	import { showToast, showConfirmDialog } from 'vant';
+	import { getCoverUrl } from '@/utils/image';
 
 	const props = defineProps({
 		show: {
@@ -236,27 +239,47 @@
 		.list-container {
 			flex: 1;
 			overflow-y: auto;
+      padding-bottom: 20px;
+			
+			&::-webkit-scrollbar {
+				width: 4px;
+			}
+			
+			&::-webkit-scrollbar-thumb {
+				background: #ddd;
+				border-radius: 2px;
+			}
+			
+			&::-webkit-scrollbar-track {
+				background: transparent;
+			}
 
 			.music-item {
 				display: flex;
 				justify-content: space-between;
 				align-items: center;
 				padding: 10px;
-				transition: background 0.2s;
+				transition: all 0.2s;
 				cursor: pointer;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid #f5f5f5;
 
 				&:active {
 					background: #f7f8fa;
+					transform: scale(0.98);
 				}
 
 				&.active {
 					background: #f0f8ff;
 
 					.music-info {
+						.index {
+							color: #1989fa;
+						}
+						
 						.text-content {
 							.name {
 								color: #1989fa;
+								font-weight: 600;
 							}
 						}
 					}
@@ -266,13 +289,13 @@
 					flex: 1;
 					display: flex;
 					align-items: center;
-					gap: 10px;
+					gap: 8px;
 					overflow: hidden;
 
           .index {
-            width: 30px;
+            width: 24px;
             text-align: center;
-            font-size: 14px;
+            font-size: 13px;
             color: #999;
             font-weight: 600;
             flex-shrink: 0;
@@ -283,14 +306,26 @@
 						font-size: 14px;
 						flex-shrink: 0;
 						animation: pulse 1.5s ease-in-out infinite;
+						margin-left: -4px;
+						margin-right: 4px;
+					}
+
+					.cover {
+						width: 45px;
+						height: 45px;
+						border-radius: 8px;
+						object-fit: cover;
+						flex-shrink: 0;
 					}
 
 					.text-content {
 						flex: 1;
 						overflow: hidden;
+						min-width: 0;
 
 						.name {
 							font-size: 14px;
+							font-weight: 500;
 							margin-bottom: 4px;
 							overflow: hidden;
 							text-overflow: ellipsis;
@@ -309,14 +344,15 @@
 
 				.delete-icon {
 					flex-shrink: 0;
-					color: #999;
-					font-size: 16px;
-					padding: 10px;
-					margin: -10px;
-					transition: color 0.2s;
+					color: #ccc;
+					font-size: 18px;
+					padding: 8px;
+          margin-left: 10px;
+					transition: all 0.2s;
 
 					&:active {
 						color: #ff4757;
+						transform: scale(0.9);
 					}
 				}
 			}
@@ -328,6 +364,17 @@
 				font-size: 14px;
 			}
 		}
+
+    // 隐藏滚动条
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    ::-webkit-scrollbar-thumb {
+      display: none;
+    }
+    ::-webkit-scrollbar-track {
+      display: none;
+    }
 	}
 
 	@keyframes pulse {

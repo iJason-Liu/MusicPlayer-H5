@@ -132,7 +132,8 @@ const clearPlaylist = () => {
     title: '清空播放列表',
     message: '确定要清空播放列表吗？',
   }).then(() => {
-    musicStore.setPlaylist([])
+    musicStore.clearPlaylist();
+    // musicStore.setPlaylist([])
     showToast('已清空')
   }).catch(() => {})
 }
