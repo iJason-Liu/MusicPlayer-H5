@@ -32,7 +32,9 @@
     "axios": "^1.6.0",
     "capacitor-music-controls-plugin": "^6.1.0",
     "cordova-plugin-background-mode": "^0.7.3",
+    "html2canvas": "^1.4.1",
     "pinia": "^2.1.0",
+    "qrcode": "^1.5.4",
     "vant": "^4.8.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"

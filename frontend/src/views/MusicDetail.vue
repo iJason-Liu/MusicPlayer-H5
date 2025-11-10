@@ -65,6 +65,9 @@
 				</div>
 			</div>
 		</div>
+		
+		<!-- 分享海报弹窗 -->
+		<SharePoster v-model:show="showSharePoster" :music="musicDetail" />
 	</div>
 </template>
 
@@ -81,6 +84,7 @@ export default {
 	import { getMusicDetail } from '@/api';
 	import { showToast } from 'vant';
 	import { getCoverUrl } from '@/utils/image';
+	import SharePoster from '@/components/SharePoster.vue';
 
 	const route = useRoute();
 	const router = useRouter();
@@ -89,6 +93,7 @@ export default {
 	const musicDetail = ref(null);
 	const musicId = computed(() => route.params.id);
 	const isFavorite = computed(() => (musicDetail.value ? musicStore.isFavorite(musicDetail.value.id) : false));
+	const showSharePoster = ref(false);
 
 	// 加载歌曲详情
 	const loadMusicDetail = async () => {
@@ -122,9 +127,9 @@ export default {
 	};
 
 	// 收藏/取消收藏
-	const handleFavorite = () => {
+	const handleFavorite = async () => {
 		if (musicDetail.value) {
-			const added = musicStore.toggleFavorite(musicDetail.value);
+			const added = await musicStore.toggleFavorite(musicDetail.value);
 			showToast(added ? '已添加到我的喜欢' : '已取消喜欢');
 		}
 	};
@@ -140,7 +145,7 @@ export default {
 	// 分享音乐
 	const shareMusic = () => {
 		if (musicDetail.value) {
-			showToast('分享功能开发中');
+			showSharePoster.value = true;
 		}
 	};
 

@@ -5,7 +5,9 @@
 		<div class="player-content">
 			<!-- 顶部操作栏 -->
 			<div class="top-bar">
-				<i class="fas fa-chevron-down" @click="$router.back()"></i>
+				<!-- <i class="fas fa-chevron-down" @click="$router.back()"></i> -->
+				<!-- 改为点击底部弹出播放列表弹窗 -->
+				<i class="fas fa-list-ul" @click="showPlaylist"></i>
 				<div class="song-info">
 					<div class="name" ref="nameRef">
 						<span class="text-content" :class="{ 'scroll-text': isNameOverflow }">
@@ -102,6 +104,9 @@
 			v-model:show="showActionSheet" 
 			:music="currentMusic"
 		/>
+		
+		<!-- 播放列表弹窗 -->
+		<PlaylistSheet v-model:show="showPlaylistSheet" />
 	</div>
 </template>
 
@@ -113,12 +118,16 @@ export default {
 
 <script setup>
 	import { ref, onMounted, computed, watch, nextTick } from "vue";
+	import { useRoute } from "vue-router";
 	import { useMusicStore } from "@/stores/music";
 	import { showToast } from "vant";
 	import { getCoverUrl } from "@/utils/image";
 	import MusicActionSheet from "@/components/MusicActionSheet.vue";
+	import PlaylistSheet from "@/components/PlaylistSheet.vue";
 	import { setupBackgroundAudio, setupMediaSession } from '@/utils/capacitor-audio';
+	import { getMusicDetail } from "@/api";
 
+	const route = useRoute();
 	const musicStore = useMusicStore();
 	const currentMusic = computed(() => musicStore.currentMusic);
 	const isPlaying = computed(() => musicStore.isPlaying);
@@ -144,10 +153,37 @@ export default {
 		get: () => musicStore.showActionSheet,
 		set: (val) => musicStore.showActionSheet = val
 	});
+	
+	const showPlaylistSheet = computed({
+		get: () => musicStore.showPlaylistSheet,
+		set: (val) => musicStore.showPlaylistSheet = val
+	});
+
+	// 从URL参数加载并播放歌曲
+	const loadMusicFromUrl = async () => {
+		const musicId = route.query.musicId;
+		if (musicId) {
+			try {
+				console.log('从URL加载歌曲，ID:', musicId);
+				const res = await getMusicDetail(musicId);
+				if (res.data) {
+					// 将歌曲添加到播放列表并播放
+					musicStore.setPlaylist([res.data]);
+					await musicStore.playMusic(res.data, 0);
+					showToast(`正在播放${res.data.name}`);
+				}
+			} catch (error) {
+				console.error('加载歌曲失败:', error);
+				showToast('加载歌曲失败');
+			}
+		}
+	};
 
 	// 在组件挂载时
-	onMounted(() => {
+	onMounted(async () => {
 		setupBackgroundAudio();
+		// 检查是否有URL参数指定的歌曲
+		await loadMusicFromUrl();
 	});
 
 	/**
@@ -350,9 +386,9 @@ export default {
 		showToast(modeText[mode]);
 	};
 
-	const handleFavorite = () => {
+	const handleFavorite = async () => {
 		if (currentMusic.value) {
-			const added = musicStore.toggleFavorite(currentMusic.value);
+			const added = await musicStore.toggleFavorite(currentMusic.value);
 			showToast(added ? "已添加到我的喜欢" : "已取消喜欢");
 		}
 	};
@@ -372,6 +408,10 @@ export default {
 			return;
 		}
 		showActionSheet.value = true;
+	};
+	
+	const showPlaylist = () => {
+		musicStore.showPlaylistSheet = true;
 	};
 </script>
 

@@ -149,11 +149,11 @@ const handleViewDetail = () => {
 }
 
 // 切换收藏
-const handleToggleFavorite = () => {
+const handleToggleFavorite = async () => {
   if (!props.music) return
-  const added = musicStore.toggleFavorite(props.music)
+  const added = await musicStore.toggleFavorite(props.music)
   showToast(added ? '已添加到我的喜欢' : '已取消喜欢')
-  handleClose()
+  // handleClose()
 }
 
 // 添加到歌单

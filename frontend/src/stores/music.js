@@ -25,6 +25,7 @@ export const useMusicStore = defineStore('music', () => {
   const favorites = ref([])
   const playMode = ref('loop') // loop, random, single
   const showActionSheet = ref(false) // 控制 ActionSheet 显示状态
+  const showPlaylistSheet = ref(false) // 控制 PlaylistSheet 显示状态
   
   // 音频对象
   const audio = ref(null)
@@ -230,6 +231,9 @@ export const useMusicStore = defineStore('music', () => {
   
   // 保存播放时长到服务器
   const savePlayDuration = async () => {
+    // 判断未登录时不执行
+    const token = localStorage.getItem('token')
+    if (!token) return
     if (!currentMusic.value || accumulatedDuration.value <= 0) return
     
     try {
@@ -403,6 +407,20 @@ export const useMusicStore = defineStore('music', () => {
         currentMusic.value = null
         currentIndex.value = -1
       }
+    }
+    localStorage.setItem('playlist', JSON.stringify(playlist.value))
+    syncPlaylistToServer(playlist.value)
+  }
+  
+  // 清空播放列表
+  const clearPlaylist = () => {
+    playlist.value = []
+    currentMusic.value = null
+    currentIndex.value = -1
+    isPlaying.value = false
+    if (audio.value) {
+      audio.value.pause()
+      audio.value.src = ''
     }
     localStorage.setItem('playlist', JSON.stringify(playlist.value))
     syncPlaylistToServer(playlist.value)
@@ -663,6 +681,7 @@ export const useMusicStore = defineStore('music', () => {
     favorites,
     playMode,
     showActionSheet,
+    showPlaylistSheet,
     hasNext,
     hasPrev,
     
@@ -678,6 +697,7 @@ export const useMusicStore = defineStore('music', () => {
     setPlaylist,
     addToPlaylist,
     removeFromPlaylist,
+    clearPlaylist,
     
     // 播放历史
     loadPlayHistory,

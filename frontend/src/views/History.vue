@@ -151,8 +151,9 @@ const isFavorite = (musicId) => {
   return musicStore.isFavorite(musicId)
 }
 
-const handleFavorite = (music) => {
-  const added = musicStore.toggleFavorite(music)
+const handleFavorite = async (music) => {
+  const added = await musicStore.toggleFavorite(music)
+  // console.log(added)
   showToast(added ? '已添加到我的喜欢' : '已取消喜欢')
 }
 

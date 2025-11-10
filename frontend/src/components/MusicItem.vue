@@ -60,8 +60,8 @@ const handlePlay = () => {
   }
 }
 
-const handleFavorite = () => {
-  const added = musicStore.toggleFavorite(props.music)
+const handleFavorite = async () => {
+  const added = await musicStore.toggleFavorite(props.music)
   showToast(added ? '已添加到我的喜欢' : '已取消喜欢')
 }
 

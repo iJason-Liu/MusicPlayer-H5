@@ -16,7 +16,7 @@ const routes = [
     path: '/player',
     name: 'Player',
     component: () => import('@/views/Player.vue'),
-    meta: { title: '播放器', requiresAuth: true }
+    meta: { title: '播放器', requiresAuth: false }  // 不设置 requiresAuth 分享功能需要使用
   },
   {
     path: '/music/:id',

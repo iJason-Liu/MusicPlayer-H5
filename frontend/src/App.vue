@@ -13,8 +13,8 @@
 		<!-- 迷你播放器 - 只在主页显示 -->
 		<MiniPlayer v-if="currentMusic && (showTabbar && route.path !== '/player')" />
 
-		<!-- 底部导航栏 - 只在主页面显示，且 ActionSheet 未显示时显示 -->
-		<CustomTabbar v-if="showTabbar && !musicStore.showActionSheet" />
+		<!-- 底部导航栏 - 只在主页面显示，且弹窗未显示时显示 -->
+		<CustomTabbar v-if="showTabbar && !showAnySheet" />
 	</div>
 </template>
 
@@ -33,6 +33,11 @@
 	const showTabbar = computed(() => {
 		const mainPages = ["/home", "/player", "/mine"];
 		return mainPages.includes(route.path);
+	});
+
+	// 检查是否有任何弹窗显示
+	const showAnySheet = computed(() => {
+		return musicStore.showActionSheet || musicStore.showPlaylistSheet;
 	});
 
 	onMounted(() => {
